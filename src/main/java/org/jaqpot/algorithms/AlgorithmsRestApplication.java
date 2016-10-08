@@ -29,8 +29,11 @@
  */
 package org.jaqpot.algorithms;
 
+import java.util.HashSet;
+import java.util.Set;
 import javax.ws.rs.ApplicationPath;
 import javax.ws.rs.core.Application;
+import org.jaqpot.algorithms.resource.*;
 
 /**
  *
@@ -39,5 +42,21 @@ import javax.ws.rs.core.Application;
  */
 @ApplicationPath("algorithms")
 public class AlgorithmsRestApplication extends Application {
+
+    @Override
+    public Set<Class<?>> getClasses() {
+        Set<Class<?>> resources = new HashSet();
+        resources.add(Leverage.class);
+        resources.add(Mopac.class);
+        resources.add(PmmlTransformer.class);
+        resources.add(Scaling.class);
+        resources.add(Standarization.class);
+        resources.add(WekaMLR.class);
+        resources.add(WekaPLS.class);
+        resources.add(WekaRBF.class);
+        resources.add(WekaSVM.class);
+
+        return resources;
+    }
 
 }
