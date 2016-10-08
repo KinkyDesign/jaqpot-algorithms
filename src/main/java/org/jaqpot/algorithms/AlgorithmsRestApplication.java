@@ -37,7 +37,7 @@ import javax.ws.rs.core.Application;
  * @author Charalampos Chomenidis
  * @author Pantelis Sopasakis
  */
-@ApplicationPath("/service")
+@ApplicationPath("algorithms")
 public class AlgorithmsRestApplication extends Application {
 
 }
