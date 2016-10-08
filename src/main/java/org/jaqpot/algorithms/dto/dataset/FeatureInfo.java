@@ -29,6 +29,7 @@
  */
 package org.jaqpot.algorithms.dto.dataset;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.util.Map;
 import java.util.Objects;
 
@@ -38,6 +39,7 @@ import java.util.Objects;
  * @author Charalampos Chomenidis
  *
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class FeatureInfo {
 
     private String URI;

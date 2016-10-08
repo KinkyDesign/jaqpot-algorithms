@@ -29,6 +29,7 @@
  */
 package org.jaqpot.algorithms.dto.dataset;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.util.Map;
 import java.util.TreeMap;
 import javax.xml.bind.annotation.XmlRootElement;
@@ -40,6 +41,7 @@ import javax.xml.bind.annotation.XmlRootElement;
  *
  */
 @XmlRootElement
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class DataEntry {
 
     private Substance compound;

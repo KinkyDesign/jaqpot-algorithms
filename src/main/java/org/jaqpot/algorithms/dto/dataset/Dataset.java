@@ -29,6 +29,7 @@
  */
 package org.jaqpot.algorithms.dto.dataset;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.util.List;
 import java.util.Set;
 import javax.xml.bind.annotation.XmlRootElement;
@@ -41,6 +42,7 @@ import javax.xml.bind.annotation.XmlRootElement;
  *
  */
 @XmlRootElement
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Dataset {//extends JaqpotEntity {
 
     public enum DescriptorCategory {

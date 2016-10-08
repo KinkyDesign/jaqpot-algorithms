@@ -29,6 +29,7 @@
  */
 package org.jaqpot.algorithms.dto.dataset;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import javax.xml.bind.annotation.XmlElement;
 
 /**
@@ -37,6 +38,7 @@ import javax.xml.bind.annotation.XmlElement;
  * @author Charalampos Chomenidis
  *
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Substance {
 
     private String URI;
