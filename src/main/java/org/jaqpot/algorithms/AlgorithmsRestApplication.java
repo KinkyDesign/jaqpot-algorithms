@@ -29,8 +29,6 @@
  */
 package org.jaqpot.algorithms;
 
-import java.util.HashSet;
-import java.util.Set;
 import javax.ws.rs.ApplicationPath;
 import javax.ws.rs.core.Application;
 
@@ -41,11 +39,5 @@ import javax.ws.rs.core.Application;
  */
 @ApplicationPath("/service")
 public class AlgorithmsRestApplication extends Application {
-
-    @Override
-    public Set<Class<?>> getClasses() {
-        Set<Class<?>> resources = new HashSet();
-        return resources;
-    }
 
 }
