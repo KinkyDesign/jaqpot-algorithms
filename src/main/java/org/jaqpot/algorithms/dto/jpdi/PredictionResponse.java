@@ -2,12 +2,7 @@
  *
  * JAQPOT Quattro
  *
- * JAQPOT Quattro and the components shipped with it, in particular:
- * (i)   JaqpotCoreServices
- * (ii)  JaqpotAlgorithmServices
- * (iii) JaqpotDB
- * (iv)  JaqpotDomain
- * (v)   JaqpotEAR
+ * JAQPOT Quattro and the components shipped with it (web applications and beans)
  * are licensed by GPL v3 as specified hereafter. Additional components may ship
  * with some other licence as will be specified therein.
  *
@@ -32,25 +27,27 @@
  * All source files of JAQPOT Quattro that are stored on github are licensed
  * with the aforementioned licence. 
  */
-package org.jaqpot.algorithm.model;
+package org.jaqpot.algorithms.dto.jpdi;
 
-import java.io.Serializable;
+import java.util.LinkedHashMap;
+import java.util.List;
 
 /**
  *
- * @author Charalampos Chomenidis
  * @author Pantelis Sopasakis
+ * @author Charalampos Chomenidis
+ *
  */
-public class PmmlModel implements Serializable {
+public class PredictionResponse {
 
-    private String pmmlString;
+    List<LinkedHashMap<String, Object>> predictions;
 
-    public String getPmmlString() {
-        return pmmlString;
+    public List<LinkedHashMap<String, Object>> getPredictions() {
+        return predictions;
     }
 
-    public void setPmmlString(String pmmlString) {
-        this.pmmlString = pmmlString;
+    public void setPredictions(List<LinkedHashMap<String, Object>> predictions) {
+        this.predictions = predictions;
     }
 
 }

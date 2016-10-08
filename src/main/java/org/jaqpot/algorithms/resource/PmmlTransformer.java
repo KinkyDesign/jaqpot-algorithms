@@ -32,7 +32,7 @@
  * All source files of JAQPOT Quattro that are stored on github are licensed
  * with the aforementioned licence. 
  */
-package org.jaqpot.algorithm.resource;
+package org.jaqpot.algorithms.resource;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -62,12 +62,12 @@ import javax.xml.transform.sax.SAXSource;
 import org.dmg.pmml.DataField;
 import org.dmg.pmml.DerivedField;
 import org.dmg.pmml.PMML;
-import org.jaqpot.algorithm.model.PmmlModel;
-import org.jaqpot.core.model.dto.dataset.Dataset;
-import org.jaqpot.core.model.dto.jpdi.PredictionRequest;
-import org.jaqpot.core.model.dto.jpdi.PredictionResponse;
-import org.jaqpot.core.model.dto.jpdi.TrainingRequest;
-import org.jaqpot.core.model.dto.jpdi.TrainingResponse;
+import org.jaqpot.algorithms.dto.dataset.Dataset;
+import org.jaqpot.algorithms.dto.jpdi.PredictionRequest;
+import org.jaqpot.algorithms.dto.jpdi.PredictionResponse;
+import org.jaqpot.algorithms.dto.jpdi.TrainingRequest;
+import org.jaqpot.algorithms.dto.jpdi.TrainingResponse;
+import org.jaqpot.algorithms.model.PmmlModel;
 import org.jboss.resteasy.client.jaxrs.ResteasyClient;
 import org.jboss.resteasy.client.jaxrs.ResteasyClientBuilder;
 import org.jpmml.evaluator.ExpressionUtil;

@@ -32,7 +32,7 @@
  * All source files of JAQPOT Quattro that are stored on github are licensed
  * with the aforementioned licence. 
  */
-package org.jaqpot.algorithm.resource;
+package org.jaqpot.algorithms.resource;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -57,15 +57,14 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import org.jaqpot.algorithm.model.WekaModel;
-import org.jaqpot.algorithm.weka.InstanceUtils;
-import org.jaqpot.core.model.dto.jpdi.PredictionRequest;
-import org.jaqpot.core.model.dto.jpdi.PredictionResponse;
-import org.jaqpot.core.model.dto.jpdi.TrainingRequest;
-import org.jaqpot.core.model.dto.jpdi.TrainingResponse;
-import org.jaqpot.core.model.factory.ErrorReportFactory;
+import org.jaqpot.algorithms.dto.jpdi.PredictionRequest;
+import org.jaqpot.algorithms.dto.jpdi.PredictionResponse;
+import org.jaqpot.algorithms.dto.jpdi.TrainingRequest;
+import org.jaqpot.algorithms.dto.jpdi.TrainingResponse;
+import org.jaqpot.algorithms.model.WekaModel;
+import org.jaqpot.algoriths.weka.InstanceUtils;
 import weka.classifiers.Classifier;
-import weka.classifiers.functions.RBFNetwork;
+import weka.classifiers.functions.PLSClassifier;
 import weka.core.Attribute;
 import weka.core.Instance;
 import weka.core.Instances;
@@ -75,24 +74,23 @@ import weka.core.Instances;
  * @author Charalampos Chomenidis
  * @author Pantelis Sopasakis
  */
-@Path("rbf")
+@Path("pls")
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
-public class WekaRBF {
+public class WekaPLS {
 
-    private final Integer _seed = 1,
-            _maxIts = -1,
-            _numClusters = 2;
-    private final Double _minStdDev = 0.1, _ridge = 1.0e-8;
+    private static final Logger LOG = Logger.getLogger(WekaPLS.class.getName());
+
+    private final int _components = 20;
+    private final String _algorithm = "PLS1";
 
     @POST
     @Path("training")
     public Response training(TrainingRequest request) {
-
         try {
             if (request.getDataset().getDataEntry().isEmpty() || request.getDataset().getDataEntry().get(0).getValues().isEmpty()) {
                 return Response.status(Response.Status.BAD_REQUEST)
-                        .entity(ErrorReportFactory.badRequest("Dataset is empty", "Cannot train model on empty dataset"))
+                        .entity("Dataset is empty. Cannot train model on empty dataset.")
                         .build();
             }
             List<String> features = request.getDataset()
@@ -106,27 +104,17 @@ public class WekaRBF {
                     .collect(Collectors.toList());
 
             Instances data = InstanceUtils.createFromDataset(request.getDataset(), request.getPredictionFeature());
-
             Map<String, Object> parameters = request.getParameters() != null ? request.getParameters() : new HashMap<>();
 
-            Double minStdDev = Double.parseDouble(parameters.getOrDefault("minStdDev", _minStdDev).toString());
-            Double ridge = Double.parseDouble(parameters.getOrDefault("ridge", _ridge).toString());
-            Integer seed = Integer.parseInt(parameters.getOrDefault("seed", _seed).toString());
-            Integer maxIts = Integer.parseInt(parameters.getOrDefault("maxIts", _maxIts).toString());
-            Integer numClusters = Integer.parseInt(parameters.getOrDefault("numClusters", _numClusters).toString());
+            Integer components = Integer.parseInt(parameters.getOrDefault("components", _components).toString());
+            String algorithm = parameters.getOrDefault("algorithm", _algorithm).toString();
 
-            RBFNetwork rbf = new RBFNetwork();
-
-            rbf.setMinStdDev(minStdDev);
-            rbf.setRidge(ridge);
-            rbf.setClusteringSeed(seed);
-            rbf.setMaxIts(maxIts);
-            rbf.setNumClusters(numClusters);
-
-            rbf.buildClassifier(data);
+            PLSClassifier classifier = new PLSClassifier();
+            classifier.setOptions(new String[]{"-C", components.toString(), "-A", algorithm});
+            classifier.buildClassifier(data);
 
             WekaModel model = new WekaModel();
-            model.setClassifier(rbf);
+            model.setClassifier(classifier);
 
             TrainingResponse response = new TrainingResponse();
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -141,11 +129,11 @@ public class WekaRBF {
             response.setIndependentFeatures(independentFeatures);
 //            response.setPmmlModel(pmml);
             response.setAdditionalInfo(request.getPredictionFeature());
-            response.setPredictedFeatures(Arrays.asList("Weka RBF prediction of " + request.getPredictionFeature()));
+            response.setPredictedFeatures(Arrays.asList("Weka PLS prediction of " + request.getPredictionFeature()));
 
             return Response.ok(response).build();
         } catch (Exception ex) {
-            Logger.getLogger(WekaMLR.class.getName()).log(Level.SEVERE, null, ex);
+            LOG.log(Level.SEVERE, null, ex);
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(ex.getMessage()).build();
         }
     }
@@ -153,11 +141,10 @@ public class WekaRBF {
     @POST
     @Path("prediction")
     public Response prediction(PredictionRequest request) {
-
         try {
             if (request.getDataset().getDataEntry().isEmpty() || request.getDataset().getDataEntry().get(0).getValues().isEmpty()) {
                 return Response.status(Response.Status.BAD_REQUEST)
-                        .entity(ErrorReportFactory.badRequest("Dataset is empty", "Cannot make predictions on empty dataset"))
+                        .entity("Dataset is empty. Cannot make predictions on empty dataset.")
                         .build();
             }
 
@@ -172,16 +159,15 @@ public class WekaRBF {
             String dependentFeature = (String) request.getAdditionalInfo();
             data.insertAttributeAt(new Attribute(dependentFeature), data.numAttributes());
             data.setClass(data.attribute(dependentFeature));
-
             List<LinkedHashMap<String, Object>> predictions = new ArrayList<>();
 //            data.stream().forEach(instance -> {
 //                try {
 //                    double prediction = classifier.classifyInstance(instance);
 //                    Map<String, Object> predictionMap = new HashMap<>();
-//                    predictionMap.put("Weka MLR prediction of " + dependentFeature, prediction);
+//                    predictionMap.put("Weka PLS prediction of " + dependentFeature, prediction);
 //                    predictions.add(predictionMap);
 //                } catch (Exception ex) {
-//                    Logger.getLogger(WekaMLR.class.getName()).log(Level.SEVERE, null, ex);
+//                    Logger.getLogger(WekaSVM.class.getName()).log(Level.SEVERE, null, ex);
 //                }
 //            });
 
@@ -190,11 +176,11 @@ public class WekaRBF {
                 try {
                     double prediction = classifier.classifyInstance(instance);
                     LinkedHashMap<String, Object> predictionMap = new LinkedHashMap<>();
-                    predictionMap.put("Weka RBF prediction of " + dependentFeature, prediction);
+                    predictionMap.put("Weka PLS prediction of " + dependentFeature, prediction);
                     predictions.add(predictionMap);
                 } catch (Exception ex) {
                     Logger.getLogger(WekaMLR.class.getName()).log(Level.SEVERE, null, ex);
-                    return Response.status(Response.Status.BAD_REQUEST).entity(ErrorReportFactory.badRequest("Error while gettting predictions.", ex.getMessage())).build();
+                    return Response.status(Response.Status.BAD_REQUEST).entity("Error while gettting predictions. " + ex.getMessage()).build();
                 }
             }
 
@@ -202,7 +188,7 @@ public class WekaRBF {
             response.setPredictions(predictions);
             return Response.ok(response).build();
         } catch (IOException | ClassNotFoundException ex) {
-            Logger.getLogger(WekaMLR.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(WekaSVM.class.getName()).log(Level.SEVERE, null, ex);
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
                     .entity(ex.getMessage())
                     .build();

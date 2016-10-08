@@ -27,7 +27,7 @@
  * All source files of JAQPOT Quattro that are stored on github are licensed
  * with the aforementioned licence. 
  */
-package org.jaqpot.algorithm.resource;
+package org.jaqpot.algorithms.resource;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -38,10 +38,8 @@ import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -51,14 +49,13 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import org.jaqpot.algorithm.model.WekaModel;
-import org.jaqpot.algorithm.pmml.PmmlUtils;
-import org.jaqpot.algorithm.weka.InstanceUtils;
-import org.jaqpot.core.model.dto.jpdi.PredictionRequest;
-import org.jaqpot.core.model.dto.jpdi.PredictionResponse;
-import org.jaqpot.core.model.dto.jpdi.TrainingRequest;
-import org.jaqpot.core.model.dto.jpdi.TrainingResponse;
-import org.jaqpot.core.model.factory.ErrorReportFactory;
+import org.jaqpot.algorithms.dto.jpdi.PredictionRequest;
+import org.jaqpot.algorithms.dto.jpdi.PredictionResponse;
+import org.jaqpot.algorithms.dto.jpdi.TrainingRequest;
+import org.jaqpot.algorithms.dto.jpdi.TrainingResponse;
+import org.jaqpot.algorithms.model.WekaModel;
+import org.jaqpot.algorithms.pmml.PmmlUtils;
+import org.jaqpot.algoriths.weka.InstanceUtils;
 import weka.classifiers.Classifier;
 import weka.classifiers.functions.LinearRegression;
 import weka.core.Attribute;
@@ -82,7 +79,7 @@ public class WekaMLR {
         try {
             if (request.getDataset().getDataEntry().isEmpty() || request.getDataset().getDataEntry().get(0).getValues().isEmpty()) {
                 return Response.status(Response.Status.BAD_REQUEST)
-                        .entity(ErrorReportFactory.badRequest("Dataset is empty", "Cannot train model on empty dataset"))
+                        .entity("Dataset is empty. Cannot train model on empty dataset.")
                         .build();
             }
             List<String> features = request.getDataset()
@@ -142,7 +139,7 @@ public class WekaMLR {
         try {
             if (request.getDataset().getDataEntry().isEmpty() || request.getDataset().getDataEntry().get(0).getValues().isEmpty()) {
                 return Response.status(Response.Status.BAD_REQUEST)
-                        .entity(ErrorReportFactory.badRequest("Dataset is empty", "Cannot train model on empty dataset"))
+                        .entity("Dataset is empty. Cannot train model on empty dataset.")
                         .build();
             }
 
@@ -179,7 +176,7 @@ public class WekaMLR {
                     predictions.add(predictionMap);
                 } catch (Exception ex) {
                     Logger.getLogger(WekaMLR.class.getName()).log(Level.SEVERE, null, ex);
-                    return Response.status(Response.Status.BAD_REQUEST).entity(ErrorReportFactory.badRequest("Error while gettting predictions.", ex.getMessage())).build();
+                    return Response.status(Response.Status.BAD_REQUEST).entity("Error while gettting predictions. " + ex.getMessage()).build();
                 }
             }
 

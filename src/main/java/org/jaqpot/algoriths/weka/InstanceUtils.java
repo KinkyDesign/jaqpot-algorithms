@@ -32,9 +32,9 @@
  * All source files of JAQPOT Quattro that are stored on github are licensed
  * with the aforementioned licence. 
  */
-package org.jaqpot.algorithm.weka;
+package org.jaqpot.algoriths.weka;
 
-import org.jaqpot.core.model.dto.dataset.Dataset;
+import org.jaqpot.algorithms.dto.dataset.Dataset;
 import weka.core.Attribute;
 import weka.core.FastVector;
 import weka.core.Instance;
@@ -60,8 +60,8 @@ public class InstanceUtils {
                 .map(feature -> {
                     return new Attribute(feature);
                 }).forEach(a -> {
-                    attrInfo.addElement(a);
-                });
+            attrInfo.addElement(a);
+        });
 
         Instances data = new Instances(dataset.getDatasetURI(), attrInfo, dataset.getDataEntry().size());
 
@@ -91,8 +91,8 @@ public class InstanceUtils {
                 .map(feature -> {
                     return new Attribute(feature);
                 }).forEach(a -> {
-                    attrInfo.addElement(a);
-                });
+            attrInfo.addElement(a);
+        });
 
         Instances data = new Instances(dataset.getDatasetURI(), attrInfo, dataset.getDataEntry().size());
 

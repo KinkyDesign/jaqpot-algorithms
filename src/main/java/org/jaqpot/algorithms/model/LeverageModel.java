@@ -27,7 +27,7 @@
  * All source files of JAQPOT Quattro that are stored on github are licensed
  * with the aforementioned licence. 
  */
-package org.jaqpot.algorithm.model;
+package org.jaqpot.algorithms.model;
 
 import java.io.Serializable;
 

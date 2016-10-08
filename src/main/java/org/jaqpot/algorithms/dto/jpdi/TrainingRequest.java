@@ -27,29 +27,45 @@
  * All source files of JAQPOT Quattro that are stored on github are licensed
  * with the aforementioned licence. 
  */
-package org.jaqpot.algorithm.model;
+package org.jaqpot.algorithms.dto.jpdi;
 
-import java.io.Serializable;
-import weka.classifiers.Classifier;
+import java.util.Map;
+import org.jaqpot.algorithms.dto.dataset.Dataset;
 
 /**
  *
- * @author Charalampos Chomenidis
  * @author Pantelis Sopasakis
+ * @author Charalampos Chomenidis
+ *
  */
-public class WekaModel implements Serializable {
+public class TrainingRequest {
 
-    Classifier classifier;
+    private Dataset dataset;
+    private String predictionFeature;
+    private Map<String, Object> parameters;
 
-    public WekaModel() {
+    public Dataset getDataset() {
+        return dataset;
     }
 
-    public Classifier getClassifier() {
-        return classifier;
+    public void setDataset(Dataset dataset) {
+        this.dataset = dataset;
     }
 
-    public void setClassifier(Classifier classifier) {
-        this.classifier = classifier;
+    public String getPredictionFeature() {
+        return predictionFeature;
+    }
+
+    public void setPredictionFeature(String predictionFeature) {
+        this.predictionFeature = predictionFeature;
+    }
+
+    public Map<String, Object> getParameters() {
+        return parameters;
+    }
+
+    public void setParameters(Map<String, Object> parameters) {
+        this.parameters = parameters;
     }
 
 }

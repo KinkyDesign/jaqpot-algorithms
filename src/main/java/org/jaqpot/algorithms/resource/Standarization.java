@@ -32,7 +32,7 @@
  * All source files of JAQPOT Quattro that are stored on github are licensed
  * with the aforementioned licence. 
  */
-package org.jaqpot.algorithm.resource;
+package org.jaqpot.algorithms.resource;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -42,10 +42,8 @@ import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.Base64;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -55,24 +53,25 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import org.jaqpot.algorithm.model.ScalingModel;
-import org.jaqpot.core.model.dto.jpdi.PredictionRequest;
-import org.jaqpot.core.model.dto.jpdi.PredictionResponse;
-import org.jaqpot.core.model.dto.jpdi.TrainingRequest;
-import org.jaqpot.core.model.dto.jpdi.TrainingResponse;
-import org.jaqpot.core.model.factory.ErrorReportFactory;
+import org.apache.commons.math3.stat.StatUtils;
+import org.jaqpot.algorithms.dto.dataset.DataEntry;
+import org.jaqpot.algorithms.dto.jpdi.PredictionRequest;
+import org.jaqpot.algorithms.dto.jpdi.PredictionResponse;
+import org.jaqpot.algorithms.dto.jpdi.TrainingRequest;
+import org.jaqpot.algorithms.dto.jpdi.TrainingResponse;
+import org.jaqpot.algorithms.model.ScalingModel;
 
 /**
  *
  * @author Charalampos Chomenidis
  * @author Pantelis Sopasakis
  */
-@Path("scaling")
+@Path("std")
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
-public class Scaling {
+public class Standarization {
 
-    private static final Logger LOG = Logger.getLogger(Scaling.class.getName());
+    private static final Logger LOG = Logger.getLogger(Standarization.class.getName());
 
     @POST
     @Path("training")
@@ -80,7 +79,7 @@ public class Scaling {
         try {
             if (request.getDataset().getDataEntry().isEmpty() || request.getDataset().getDataEntry().get(0).getValues().isEmpty()) {
                 return Response.status(Response.Status.BAD_REQUEST)
-                        .entity(ErrorReportFactory.badRequest("Dataset is empty", "Cannot train model on empty dataset"))
+                        .entity("Dataset is empty. Cannot train model on empty dataset.")
                         .build();
             }
             List<String> features = request.getDataset()
@@ -98,14 +97,16 @@ public class Scaling {
             LinkedHashMap<String, Double> minValues = new LinkedHashMap<>();
 
             features.stream().forEach(feature -> {
-                Double max = request.getDataset().getDataEntry().stream().map(dataEntry -> {
+                List<Double> values = request.getDataset().getDataEntry().stream().map(dataEntry -> {
                     return Double.parseDouble(dataEntry.getValues().get(feature).toString());
-                }).max(Double::compare).orElse(0.0);
-                Double min = request.getDataset().getDataEntry().stream().map(dataEntry -> {
-                    return Double.parseDouble(dataEntry.getValues().get(feature).toString());
-                }).min(Double::compare).orElse(0.0);
-                maxValues.put(feature, max);
-                minValues.put(feature, min);
+                }).collect(Collectors.toList());
+                double[] doubleValues = values.stream().mapToDouble(Double::doubleValue).toArray();
+
+                Double mean = StatUtils.mean(doubleValues);
+                Double stddev = Math.sqrt(StatUtils.variance(doubleValues));
+
+                maxValues.put(feature, stddev);
+                minValues.put(feature, mean);
             });
             ScalingModel model = new ScalingModel();
             model.setMaxValues(maxValues);
@@ -119,7 +120,7 @@ public class Scaling {
             response.setRawModel(base64Model);
             response.setIndependentFeatures(features);
             response.setPredictedFeatures(features.stream().map(feature -> {
-                return "Scaled " + feature;
+                return "Standarized " + feature;
             }).collect(Collectors.toList()));
             return Response.ok(response).build();
         } catch (Exception ex) {
@@ -134,7 +135,7 @@ public class Scaling {
         try {
             if (request.getDataset().getDataEntry().isEmpty() || request.getDataset().getDataEntry().get(0).getValues().isEmpty()) {
                 return Response.status(Response.Status.BAD_REQUEST)
-                        .entity(ErrorReportFactory.badRequest("Dataset is empty", "Cannot make predictions on empty dataset"))
+                        .entity("Dataset is empty. Cannot make predictions on empty dataset.")
                         .build();
             }
             List<String> features = request.getDataset()
@@ -151,24 +152,27 @@ public class Scaling {
             ByteArrayInputStream bais = new ByteArrayInputStream(modelBytes);
             ObjectInput in = new ObjectInputStream(bais);
             ScalingModel model = (ScalingModel) in.readObject();
+            in.close();
+            bais.close();
 
             List<LinkedHashMap<String, Object>> predictions = new ArrayList<>();
 
-            request.getDataset().getDataEntry().stream().forEach(dataEntry -> {
+            for (DataEntry dataEntry : request.getDataset().getDataEntry()) {
                 LinkedHashMap<String, Object> data = new LinkedHashMap<>();
-                features.stream().forEach(feature -> {
-                    Double max = model.getMaxValues().get(feature);
-                    Double min = model.getMinValues().get(feature);
+                for (String feature : features) {
+                    Double stdev = model.getMaxValues().get(feature);
+                    Double mean = model.getMinValues().get(feature);
                     Double value = Double.parseDouble(dataEntry.getValues().get(feature).toString());
-                    if (!max.equals(min)) {
-                        value = (value - min) / (max - min);
+                    if (stdev != null && stdev != 0.0 && mean != null) {
+                        value = (value - mean) / stdev;
                     } else {
                         value = 1.0;
                     }
-                    data.put("Scaled " + feature, value);
-                });
+                    data.put("Standarized " + feature, value);
+                }
                 predictions.add(data);
-            });
+            }
+
             PredictionResponse response = new PredictionResponse();
             response.setPredictions(predictions);
 

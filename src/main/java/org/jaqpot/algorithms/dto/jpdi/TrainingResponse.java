@@ -27,25 +27,62 @@
  * All source files of JAQPOT Quattro that are stored on github are licensed
  * with the aforementioned licence. 
  */
-package org.jaqpot.algorithm;
+package org.jaqpot.algorithms.dto.jpdi;
 
-import java.util.HashSet;
-import java.util.Set;
-import javax.ws.rs.ApplicationPath;
-import javax.ws.rs.core.Application;
+import java.util.List;
 
 /**
  *
- * @author Charalampos Chomenidis
  * @author Pantelis Sopasakis
+ * @author Charalampos Chomenidis
+ *
  */
-@ApplicationPath("/service")
-public class JaqpotAlgorithmRestApplication extends Application {
+public class TrainingResponse {
 
-    @Override
-    public Set<Class<?>> getClasses() {
-        Set<Class<?>> resources = new HashSet();
-        return resources;
+    private Object rawModel;
+    private Object pmmlModel;
+    private Object additionalInfo;
+    List<String> independentFeatures;
+    List<String> predictedFeatures;
+
+    public Object getRawModel() {
+        return rawModel;
+    }
+
+    public void setRawModel(Object rawModel) {
+        this.rawModel = rawModel;
+    }
+
+    public Object getPmmlModel() {
+        return pmmlModel;
+    }
+
+    public void setPmmlModel(Object pmmlModel) {
+        this.pmmlModel = pmmlModel;
+    }
+
+    public Object getAdditionalInfo() {
+        return additionalInfo;
+    }
+
+    public void setAdditionalInfo(Object additionalInfo) {
+        this.additionalInfo = additionalInfo;
+    }
+
+    public List<String> getIndependentFeatures() {
+        return independentFeatures;
+    }
+
+    public void setIndependentFeatures(List<String> independentFeatures) {
+        this.independentFeatures = independentFeatures;
+    }
+
+    public List<String> getPredictedFeatures() {
+        return predictedFeatures;
+    }
+
+    public void setPredictedFeatures(List<String> predictedFeatures) {
+        this.predictedFeatures = predictedFeatures;
     }
 
 }

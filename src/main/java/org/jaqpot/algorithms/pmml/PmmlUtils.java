@@ -32,7 +32,7 @@
  * All source files of JAQPOT Quattro that are stored on github are licensed
  * with the aforementioned licence. 
  */
-package org.jaqpot.algorithm.pmml;
+package org.jaqpot.algorithms.pmml;
 
 import java.io.ByteArrayOutputStream;
 import java.util.Arrays;

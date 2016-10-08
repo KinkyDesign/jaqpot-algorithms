@@ -27,7 +27,7 @@
  * All source files of JAQPOT Quattro that are stored on github are licensed
  * with the aforementioned licence. 
  */
-package org.jaqpot.algorithm.resource;
+package org.jaqpot.algorithms.resource;
 
 import Jama.Matrix;
 import Jama.SingularValueDecomposition;
@@ -41,10 +41,8 @@ import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -54,13 +52,12 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import org.jaqpot.algorithm.model.LeverageModel;
-import org.jaqpot.core.model.dto.dataset.Dataset;
-import org.jaqpot.core.model.dto.jpdi.PredictionRequest;
-import org.jaqpot.core.model.dto.jpdi.PredictionResponse;
-import org.jaqpot.core.model.dto.jpdi.TrainingRequest;
-import org.jaqpot.core.model.dto.jpdi.TrainingResponse;
-import org.jaqpot.core.model.factory.ErrorReportFactory;
+import org.jaqpot.algorithms.dto.dataset.Dataset;
+import org.jaqpot.algorithms.dto.jpdi.PredictionRequest;
+import org.jaqpot.algorithms.dto.jpdi.PredictionResponse;
+import org.jaqpot.algorithms.dto.jpdi.TrainingRequest;
+import org.jaqpot.algorithms.dto.jpdi.TrainingResponse;
+import org.jaqpot.algorithms.model.LeverageModel;
 
 /**
  *
@@ -124,7 +121,7 @@ public class Leverage {
             return Response.ok(response).build();
         } catch (IOException ex) {
             Logger.getLogger(Leverage.class.getName()).log(Level.SEVERE, null, ex);
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(ErrorReportFactory.internalServerError()).build();
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(ex.getMessage()).build();
         }
     }
 
@@ -185,7 +182,7 @@ public class Leverage {
         } catch (IOException | ClassNotFoundException ex) {
             Logger.getLogger(Leverage.class.getName()).log(Level.SEVERE, null, ex);
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(ErrorReportFactory.internalServerError())
+                    .entity(ex.getMessage())
                     .build();
         }
     }

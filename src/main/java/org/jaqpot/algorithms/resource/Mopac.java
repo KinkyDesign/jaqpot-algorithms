@@ -32,7 +32,7 @@
  * All source files of JAQPOT Quattro that are stored on github are licensed
  * with the aforementioned licence. 
  */
-package org.jaqpot.algorithm.resource;
+package org.jaqpot.algorithms.resource;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -51,10 +51,10 @@ import javax.ws.rs.core.MultivaluedHashMap;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 import org.apache.commons.io.IOUtils;
-import org.jaqpot.core.model.dto.ambit.AmbitTask;
-import org.jaqpot.core.model.dto.ambit.AmbitTaskArray;
-import org.jaqpot.core.model.dto.dataset.Dataset;
-import org.jaqpot.core.model.factory.ErrorReportFactory;
+import org.jaqpot.algorithms.dto.ambit.AmbitTask;
+import org.jaqpot.algorithms.dto.ambit.AmbitTaskArray;
+import org.jaqpot.algorithms.dto.dataset.Dataset;
+
 import org.jboss.resteasy.client.jaxrs.ResteasyClient;
 import org.jboss.resteasy.client.jaxrs.ResteasyClientBuilder;
 import org.jboss.resteasy.client.jaxrs.ResteasyWebTarget;
@@ -123,7 +123,7 @@ public class Mopac {
             } else {
                 return Response
                         .status(Response.Status.BAD_GATEWAY)
-                        .entity(ErrorReportFactory.remoteError(ambitTaskUri, ErrorReportFactory.internalServerError(), null))
+                        .entity("Remote error task:" + ambitTask.getUri())
                         .build();
             }
 
@@ -162,7 +162,7 @@ public class Mopac {
             } else {
                 return Response
                         .status(Response.Status.BAD_GATEWAY)
-                        .entity(ErrorReportFactory.remoteError(ambitTaskUri, ErrorReportFactory.internalServerError(), null))
+                        .entity("Remote error task:" + ambitTask.getUri())
                         .build();
             }
 
@@ -179,12 +179,12 @@ public class Mopac {
             return Response.ok(dataset.getDataEntry().get(0).getValues()).build();
         } catch (MalformedURLException ex) {
             return Response.status(Response.Status.BAD_REQUEST)
-                    .entity(ErrorReportFactory.badRequest(ex.getMessage(), "Bad pdb file:" + pdbFile))
+                    .entity("Bad pdb file:" + pdbFile + " " + ex.getMessage())
                     .build();
         } catch (IOException ex) {
             return Response
                     .status(Response.Status.BAD_GATEWAY)
-                    .entity(ErrorReportFactory.remoteError(ex.getMessage(), ErrorReportFactory.internalServerError(), ex))
+                    .entity(ex.getMessage())
                     .build();
         }
     }

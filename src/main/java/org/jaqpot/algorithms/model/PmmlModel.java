@@ -32,39 +32,25 @@
  * All source files of JAQPOT Quattro that are stored on github are licensed
  * with the aforementioned licence. 
  */
-package org.jaqpot.algorithm.model;
+package org.jaqpot.algorithms.model;
 
 import java.io.Serializable;
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 /**
  *
  * @author Charalampos Chomenidis
  * @author Pantelis Sopasakis
  */
-public class ScalingModel implements Serializable {
+public class PmmlModel implements Serializable {
 
-    private LinkedHashMap<String, Double> maxValues;
-    private LinkedHashMap<String, Double> minValues;
+    private String pmmlString;
 
-    public ScalingModel() {
+    public String getPmmlString() {
+        return pmmlString;
     }
 
-    public LinkedHashMap<String, Double> getMaxValues() {
-        return maxValues;
-    }
-
-    public void setMaxValues(LinkedHashMap<String, Double> maxValues) {
-        this.maxValues = maxValues;
-    }
-
-    public LinkedHashMap<String, Double> getMinValues() {
-        return minValues;
-    }
-
-    public void setMinValues(LinkedHashMap<String, Double> minValues) {
-        this.minValues = minValues;
+    public void setPmmlString(String pmmlString) {
+        this.pmmlString = pmmlString;
     }
 
 }
