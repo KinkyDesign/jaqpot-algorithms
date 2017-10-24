@@ -48,6 +48,7 @@ public class AlgorithmsRestApplication extends Application {
         Set<Class<?>> resources = new HashSet();
         resources.add(Leverage.class);
         resources.add(Mopac.class);
+        resources.add(SmilesDescriptor.class);
         resources.add(PmmlTransformer.class);
         resources.add(Scaling.class);
         resources.add(Standarization.class);

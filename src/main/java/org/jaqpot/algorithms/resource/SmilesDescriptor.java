@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
  * Created by Angelos Valsamis on 4/4/2017.
  */
 
-@Path("scaling")
+@Path("smiles")
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
 public class SmilesDescriptor {
