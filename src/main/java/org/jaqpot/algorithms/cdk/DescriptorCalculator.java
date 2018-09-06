@@ -133,24 +133,24 @@ public class DescriptorCalculator  {
                 IDescriptorResult result = value.getValue();
                 if (result instanceof DoubleResult) {
                     if (!String.valueOf(((DoubleResult) result)).equals("NaN") && !String.valueOf(((DoubleResult) result)).equals("NA"))
-                        calulationMap.put("/jaqpot/feature/" + value.getNames()[0], String.valueOf(((DoubleResult) result).doubleValue()));
+                        calulationMap.put("/jaqpot/feature/" + value.getNames()[0], ((DoubleResult) result).doubleValue());
                 }
                 else if (result instanceof IntegerResult) {
                     if (!String.valueOf(((IntegerResult) result)).equals("NaN") && !String.valueOf(((IntegerResult) result)).equals("NA"))
-                        calulationMap.put("/jaqpot/feature/" + value.getNames()[0], String.valueOf(((IntegerResult) result).intValue()));
+                        calulationMap.put("/jaqpot/feature/" + value.getNames()[0], ((IntegerResult) result).intValue());
                 }
                 else if (result instanceof DoubleArrayResult)
                     for (int i = 0; i < result.length(); i++)
                     {
                         if (!String.valueOf(((DoubleArrayResult) result).get(i)).equals("NaN") && !String.valueOf(((DoubleArrayResult) result).get(i)).equals("NA"))
-                            calulationMap.put("/jaqpot/feature/"+value.getNames()[i],String.valueOf(((DoubleArrayResult) result).get(i)));
+                            calulationMap.put("/jaqpot/feature/"+value.getNames()[i],((DoubleArrayResult) result).get(i));
                     }
 
                 else if (result instanceof IntegerArrayResult)
                     for (int i = 0; i < result.length(); i++)
                     {
                         if (!String.valueOf(((IntegerArrayResult) result).get(i)).equals("NaN") && !String.valueOf(((IntegerArrayResult) result).get(i)).equals("NA"))
-                            calulationMap.put("/jaqpot/feature/"+value.getNames()[i],String.valueOf(((IntegerArrayResult) result).get(i)));
+                            calulationMap.put("/jaqpot/feature/"+value.getNames()[i],((IntegerArrayResult) result).get(i));
                     }
             }
 
