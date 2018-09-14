@@ -1,11 +1,14 @@
 package org.jaqpot.algorithms.resource;
 
 
+import com.univocity.parsers.csv.CsvParser;
+import com.univocity.parsers.csv.CsvParserSettings;
 import org.jaqpot.algorithms.cdk.SmilesDescriptorsClientImpl;
 import org.jaqpot.algorithms.dto.dataset.DataEntry;
 import org.jaqpot.algorithms.dto.dataset.Dataset;
 import org.jaqpot.algorithms.dto.jpdi.CalculateRequest;
 import org.jaqpot.algorithms.dto.jpdi.CalculateResponse;
+import org.jaqpot.algorithms.utils.DatasetFactory;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
@@ -13,6 +16,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.io.ByteArrayInputStream;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -41,17 +45,29 @@ public class SmilesDescriptor {
             Map<String, Object> parameters = calculateRequest.getParameters() != null ? calculateRequest.getParameters() : new HashMap<>();
             ArrayList<String> wantedCategoriesArray = (ArrayList<String>)parameters.getOrDefault("categories", _categories);
 
-            String[] wantedCategories = wantedCategoriesArray.stream().toArray(String[]::new);
+            String[] wantedCategories = wantedCategoriesArray.toArray(new String[0]);
 
             byte[] bFile = calculateRequest.getFile();
             if (bFile == null) return Response.status(Response.Status.BAD_REQUEST).entity("Empty File").build();
-            SmilesDescriptorsClientImpl smilesDescriptorsClient = new SmilesDescriptorsClientImpl();
-            Dataset calculations;
-            calculations = smilesDescriptorsClient.generateDatasetBySmiles(wantedCategories,bFile);
 
-         //   if (intersectColumns) {
-                //Takes the intersection of properties of all substances
-            calculations.getDataEntry().stream().forEach(de -> {
+
+            //Get first column
+            CsvParserSettings settings = new CsvParserSettings();
+            settings.selectIndexes(0);
+            settings.setHeaderExtractionEnabled(true);
+
+            CsvParser parser = new CsvParser(settings);
+
+            List<String> firstColumn = new ArrayList<>();
+            List<String[]> allRows = parser.parseAll(new ByteArrayInputStream(bFile));
+            for (String[] row:allRows)
+                firstColumn.add(row[0]);
+
+            //Calculate smiles features
+            SmilesDescriptorsClientImpl smilesDescriptorsClient = new SmilesDescriptorsClientImpl();
+            Dataset calculations = smilesDescriptorsClient.generateDatasetBySmiles(wantedCategories,firstColumn);
+
+            calculations.getDataEntry().forEach(de -> {
                 calculations.getDataEntry().stream()
                             .filter(e -> !e.equals(de))
                             .forEach(e -> {
@@ -74,6 +90,10 @@ public class SmilesDescriptor {
             descriptorCategories.add(Dataset.DescriptorCategory.CDK);
             calculations.setDescriptors(descriptorCategories);
 
+            //Calculate file features
+            Dataset dummyDataset = DatasetFactory.calculateRowsAndColumns(new ByteArrayInputStream(bFile));
+
+            Dataset finalDataset = DatasetFactory.mergeRows(dummyDataset,calculations);
             calculations.setTotalRows(calculations.getDataEntry().size());
             calculations.setTotalColumns(calculations.getDataEntry()
                     .stream()
@@ -85,8 +105,7 @@ public class SmilesDescriptor {
                     })
                     .getValues().size());
             CalculateResponse calculateResponse = new CalculateResponse();
-            calculateResponse.setEntries(calculations);
-
+            calculateResponse.setEntries(finalDataset);
             return Response.ok(calculateResponse).build();
         } catch (Exception ex) {
         LOG.log(Level.SEVERE, null, ex);

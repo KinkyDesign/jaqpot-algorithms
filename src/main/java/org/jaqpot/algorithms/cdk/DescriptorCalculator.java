@@ -18,9 +18,8 @@ import org.openscience.cdk.silent.SilentChemObjectBuilder;
 import org.openscience.smsd.tools.ExtAtomContainerManipulator;
 
 import javax.swing.*;
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 public class DescriptorCalculator  {
@@ -56,15 +55,22 @@ public class DescriptorCalculator  {
         return exceptionList;
     }
 
-    public Dataset calculateMoleculeDescriptors(byte[] sdfFileName) throws CDKException, IOException {
+    public Dataset calculateMoleculeDescriptors(List<String> sdfFileName) throws CDKException, IOException {
 
         //Get a local instance, since we need to remove groups of NA descriptors
         List<IDescriptor> myDescriptors = this.descriptors;
 
-        ByteArrayInputStream bis = new ByteArrayInputStream(sdfFileName);
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        DataOutputStream out = new DataOutputStream(baos);
+        for (String element : sdfFileName) {
+            out.writeBytes(element);
+            out.write(0x0A);
+        }
+        byte[] bytes  = baos.toByteArray();
+
+        ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
 
         Dataset dataset = new Dataset();
-
         DefaultIteratingChemObjectReader iterReader = null;
 
         if (inputFormat.equals("smi"))

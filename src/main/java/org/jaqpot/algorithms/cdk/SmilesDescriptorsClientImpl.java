@@ -16,7 +16,7 @@ public class SmilesDescriptorsClientImpl implements SmilesDescriptorsClient {
     }
 
     @Override
-    public Dataset generateDatasetBySmiles(String[] wantedCategories, byte[] smilesFile) throws CDKException {
+    public Dataset generateDatasetBySmiles(String[] wantedCategories, List<String> smilesFile) throws CDKException {
         HashMap<String, DefaultMutableTreeNode> categories;
         List<IDescriptor> selectedDescriptors = new ArrayList<IDescriptor>();
         categories = CDKDescUtils.instantiateCategories();
