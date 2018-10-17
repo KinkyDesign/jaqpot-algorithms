@@ -1,9 +1,6 @@
 package org.jaqpot.algorithms.cdk;
 
-import org.jaqpot.algorithms.dto.dataset.DataEntry;
-import org.jaqpot.algorithms.dto.dataset.Dataset;
-import org.jaqpot.algorithms.dto.dataset.FeatureInfo;
-import org.jaqpot.algorithms.dto.dataset.Substance;
+import org.jaqpot.algorithms.dto.dataset.*;
 import org.openscience.cdk.CDKConstants;
 import org.openscience.cdk.DefaultChemObjectBuilder;
 import org.openscience.cdk.exception.CDKException;
@@ -161,11 +158,9 @@ public class DescriptorCalculator  {
             }
 
             DataEntry dataEntry = new DataEntry();
-            Substance substance = new Substance();
-            substance.setName(title);
-            substance.setOwnerUUID("26cec5dd-1d31-4a1c-b94f-b2e17d057211");
-            substance.setURI("/jaqpot/substance/"+title);
-            dataEntry.setCompound(substance);
+            EntryId entryId = new EntryId();
+            entryId.setName(title);
+            dataEntry.setEntryId(entryId);
             dataEntry.setValues(calulationMap);
 
             dataEntries.add(dataEntry);

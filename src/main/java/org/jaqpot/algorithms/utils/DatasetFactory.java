@@ -1,10 +1,7 @@
 package org.jaqpot.algorithms.utils;
 
 import org.apache.commons.lang3.math.NumberUtils;
-import org.jaqpot.algorithms.dto.dataset.DataEntry;
-import org.jaqpot.algorithms.dto.dataset.Dataset;
-import org.jaqpot.algorithms.dto.dataset.FeatureInfo;
-import org.jaqpot.algorithms.dto.dataset.Substance;
+import org.jaqpot.algorithms.dto.dataset.*;
 
 import java.io.InputStream;
 import java.util.*;
@@ -57,14 +54,14 @@ public class DatasetFactory {
                     else
                         values.put(it1.next(),Float.parseFloat(it));
                 }
-                Substance substance = new Substance();
-                substance.setURI("/substance/" + count);
-                substance.setName("row" + count);
-                substance.setOwnerUUID("7da545dd-2544-43b0-b834-9ec02553f7f2");
-                DataEntry dataEntry = new DataEntry();
-                dataEntry.setValues(values);
-                dataEntry.setCompound(substance);
-                dataEntryList.add(dataEntry);
+                EntryId entryId = new EntryId();
+                entryId.setName("row" + count);
+
+               // DataEntry dataEntry = new DataEntry();
+               // dataEntry.setValues(values);
+               // dataEntry.setEntryId();
+               // dataEntry.setCompound(substance);
+              //  dataEntryList.add(dataEntry);
             }
             count++;
         }

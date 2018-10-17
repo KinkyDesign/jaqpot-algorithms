@@ -29,11 +29,8 @@
  */
 package org.jaqpot.algorithms.dto.dataset;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-
-import javax.xml.bind.annotation.XmlRootElement;
-import java.util.Map;
-import java.util.TreeMap;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  *
@@ -41,55 +38,58 @@ import java.util.TreeMap;
  * @author Charalampos Chomenidis
  *
  */
-@XmlRootElement
-@JsonInclude(JsonInclude.Include.NON_NULL)
-public class DataEntry{// extends JaqpotEntity {
+@JsonIgnoreProperties(ignoreUnknown = true)
+public class EntryId {
 
-    private String _id;
-
-    public String get_id() {
-        return _id;
+    String URI;
+    String name;
+    String ownerUUID;
+    String type;
+    
+    public EntryId(){}
+    public EntryId(String URI, String name, String ownerUUID) {
+        this.URI = URI;
+        this.name = name;
+        this.ownerUUID = ownerUUID;
     }
 
-    public void set_id(String _id) {
-        this._id = _id;
+    @JsonProperty("URI")
+    public String getURI() {
+        return URI;
     }
 
-    private String datasetId;
-
-    private EntryId entryId;
-
-    public DataEntry(){}
-
-    TreeMap<String, Object> values;
-
-    public EntryId getEntryId() {
-        return entryId;
+    @JsonProperty("URI")
+    public void setURI(String URI) {
+        this.URI = URI;
     }
 
-    public void setEntryId(EntryId entryId) {
-        this.entryId = entryId;
+    public String getName() {
+        return name;
     }
 
-    public String getDatasetId() {
-        return datasetId;
+    public void setName(String name) {
+        this.name = name;
     }
 
-    public void setDatasetId(String datasetId) {
-        this.datasetId = datasetId;
+    public String getOwnerUUID() {
+        return ownerUUID;
     }
 
-    public Map<String, Object> getValues() {
-        return values;
+    public void setOwnerUUID(String ownerUUID) {
+        this.ownerUUID = ownerUUID;
     }
 
-    public void setValues(TreeMap<String, Object> values) {
-        this.values = values;
+    public String getType() {
+        return type;
     }
 
+    public void setType(String type) {
+        this.type = type;
+    }
+    
     @Override
     public String toString() {
-        return "DataEntry{" + "datasetId=" + datasetId + ", values=" + values + '}';
+        return "EntryId{" + "URI=" + URI + '}';
     }
 
 }

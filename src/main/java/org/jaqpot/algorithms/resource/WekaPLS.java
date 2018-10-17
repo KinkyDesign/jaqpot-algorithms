@@ -64,6 +64,7 @@ import org.jaqpot.algorithms.dto.jpdi.TrainingResponse;
 import org.jaqpot.algorithms.model.WekaModel;
 import org.jaqpot.algoriths.weka.InstanceUtils;
 import weka.classifiers.Classifier;
+
 import weka.classifiers.functions.PLSClassifier;
 import weka.core.Attribute;
 import weka.core.Instance;
