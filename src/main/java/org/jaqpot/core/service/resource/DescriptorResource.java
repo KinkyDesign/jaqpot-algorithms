@@ -239,18 +239,13 @@ public class DescriptorResource {
             })
     @org.jaqpot.core.service.annotations.Task
     public Response applydescriptor(
-            // @ApiParam(name = "title", required = true) @FormParam("title") String title,
-            // @ApiParam(name = "description", required = true) @FormParam("description") String description,
-            // @ApiParam(name = "dataset_uri") @FormParam("dataset_uri") String datasetURI,
-            // @ApiParam(name = "description_features") @FormParam("description_features") Set<String> descriptionFeatures,
-            // @ApiParam(name = "parameters") @FormParam("parameters") String parameters,
             @Parameter(name = "title", description = "title", required = true, schema = @Schema(implementation = String.class)) @FormParam("title") String title,
             @Parameter(name = "description", description = "description", required = true, schema = @Schema(implementation = String.class)) @FormParam("description") String description,
-            @Parameter(name = "dataset_uri", description = "dataset_uri", schema = @Schema(implementation = String.class))@FormParam("dataset_uri") String datasetURI,
-            @Parameter(name = "description_features", description = "description_features", array = @ArraySchema(schema = @Schema(type = "string"))) @FormParam("description_features") Set<String> descriptionFeatures,
+            @Parameter(name = "datasetURI", description = "datasetURI", schema = @Schema(implementation = String.class))@FormParam("datasetURI") String datasetURI,
+            @Parameter(name = "descriptionFeatures", description = "description_features", array = @ArraySchema(schema = @Schema(type = "string"))) @FormParam("descriptionFeatures") Set<String> descriptionFeatures,
             @Parameter(name = "parameters", description = "parameters", schema = @Schema(implementation = String.class)) @FormParam("parameters") String parameters,
-            @Parameter(name = "id", description = "id", schema = @Schema(implementation = String.class)) @PathParam("id") String descriptorId,
-            @Parameter(name = "Authorization", description = "Authorization token", schema = @Schema(implementation = String.class))@HeaderParam("Authorization") String api_key) throws QuotaExceededException, ParameterIsNullException, ParameterInvalidURIException, ParameterTypeException, ParameterRangeException, ParameterScopeException, JaqpotDocumentSizeExceededException {
+            @PathParam("id") String descriptorId,
+            @HeaderParam("Authorization") String api_key) throws QuotaExceededException, ParameterIsNullException, ParameterInvalidURIException, ParameterTypeException, ParameterRangeException, ParameterScopeException, JaqpotDocumentSizeExceededException {
         UrlValidator urlValidator = new UrlValidator(UrlValidator.ALLOW_LOCAL_URLS);
 
         String[] apiA = api_key.split("\\s+");

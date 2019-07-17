@@ -157,13 +157,14 @@ public class DescriptorProcedure extends AbstractJaqpotProcedure implements Mess
             //Case of all applying descriptor service to all featureURIs
             
             if (featureURIs.toString().contains("all")) {
-                Set<String> featUris = new HashSet();
+                HashSet<String> featUris = new HashSet();
+                //ArrayList<String> featUris = new ArrayList();
                 initialDataset.getFeatures().stream().forEach(f -> {
                     featUris.add(f.getURI());
                 });
-                subDataset = DatasetFactory.copy(initialDataset, featUris);
+                subDataset = DatasetFactory.select(initialDataset, featUris);
             } else {
-                subDataset = DatasetFactory.copy(initialDataset, featureURIs);
+                subDataset = DatasetFactory.select(initialDataset, (HashSet<String>)featureURIs);
             }
 
             subDataset.setMeta(null);
@@ -229,10 +230,10 @@ public class DescriptorProcedure extends AbstractJaqpotProcedure implements Mess
             String featureURI = propertyManager.getProperty(PropertyManager.PropertyType.JAQPOT_BASE_SERVICE) + "feature/" + f.getId();
 
             //Update FeatureURIs in Data Entries
-            for (DataEntry dataentry : dataset.getDataEntry()) {
-                Object value = dataentry.getValues().remove(featureInfo.getURI());
-                dataentry.getValues().put(featureURI, value);
-            }
+//            for (DataEntry dataentry : dataset.getDataEntry()) {
+//                Object value = dataentry.getValues().remove(featureInfo.getURI());
+//                dataentry.getValues().put(featureURI, value);
+//            }
             featureInfo.setURI(featureURI);
         }
     }
@@ -261,10 +262,10 @@ public class DescriptorProcedure extends AbstractJaqpotProcedure implements Mess
             featureURI = propertyManager.getProperty(PropertyManager.PropertyType.JAQPOT_BASE_SERVICE) + "feature/" + f.getId();
 
             //Update FeatureURIs in Data Entries
-            for (DataEntry dataentry : dataset.getDataEntry()) {
-                Object value = dataentry.getValues().remove(featureInfo.getURI());
-                dataentry.getValues().put(featureURI, value);
-            }
+//            for (DataEntry dataentry : dataset.getDataEntry()) {
+//                Object value = dataentry.getValues().remove(featureInfo.getURI());
+//                dataentry.getValues().put(featureURI, value);
+//            }
             //Update FeatureURI in Feature Info
             featureInfo.setConditions(null);
             featureInfo.setName(featureInfo.getURI());

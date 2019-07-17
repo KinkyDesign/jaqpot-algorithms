@@ -34,6 +34,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
+import java.util.Stack;
 import java.util.TreeMap;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -143,11 +144,24 @@ public class DatasetFactory {
         return result;
     }
 
-    public static Dataset copy(Dataset dataset, Set<String> features) {
+    public static Dataset select(Dataset dataset, HashSet<String> features) {
         Dataset result = new Dataset();
         result.setId(dataset.getId());
         result.setMeta(dataset.getMeta());
-
+        //Integer num_features = features.size();
+        //ref: https://stackoverflow.com/questions/24010109/java-8-stream-reverse-order
+        //List<Integer> index = IntStream.range(0, num_features-1).map(i->-i+num_features-1).boxed().collect(Collectors.toList());
+        //Stack index_stack = new Stack();
+        //index_stack.addAll(index);
+        Set<String> keyValues = new HashSet();
+        
+        Set<FeatureInfo> ds_features = dataset.getFeatures();
+        ds_features.stream().forEach(feature -> {
+                 if(features.contains(feature.getURI())){
+                       keyValues.add(feature.getKey());
+                 }
+        });
+        
         List<DataEntry> dataEntries = dataset.getDataEntry()
                 .parallelStream()
                 .map(dataEntry -> {
@@ -155,19 +169,24 @@ public class DatasetFactory {
                     newEntry.setEntryId(dataEntry.getEntryId());
                     TreeMap<String, Object> values = new TreeMap<>();
                     dataEntry.getValues()
-                            .keySet()
-                            .stream()
-                            .filter(feature -> features.contains(feature))
-                            .forEach(feature -> {
-                                values.put(feature, dataEntry.getValues().get(feature));
-                            });
+                    .keySet()
+                    .stream()
+                    //.filter(feature -> features.contains(feature))
+                    .filter(key -> keyValues.contains(key))        
+                    .forEach(key -> {
+                        
+                        values.put(key, dataEntry.getValues().get(key));
+
+                    });
                     newEntry.setValues(values);
                     return newEntry;
                 })
                 .collect(Collectors.toList());
         result.setDataEntry(dataEntries);
         Set<FeatureInfo> featureInfo = new HashSet<>();
-        dataset.getFeatures().stream().filter(f -> features.contains(f.getURI())).forEach(f -> featureInfo.add(f));
+        dataset.getFeatures().stream()
+                .filter(f -> keyValues.contains(f.getKey()))
+                .forEach(f -> featureInfo.add(f));
         result.setFeatures(featureInfo);
         return result;
     }
@@ -247,13 +266,13 @@ public class DatasetFactory {
         }
 
     }
-    
-    public static Dataset addNullFeaturesFromPretrained(Dataset dataset, List<String> independentFeatures, List<String> predictedFeatures){
+
+    public static Dataset addNullFeaturesFromPretrained(Dataset dataset, List<String> independentFeatures, List<String> predictedFeatures) {
         DataEntry de = new DataEntry();
         EntryId entryId = new EntryId();
         entryId.setOwnerUUID(dataset.getMeta().getCreators().toArray()[0].toString());
         de.setEntryId(entryId);
-        
+
         TreeMap<String, Object> values = new TreeMap();
         independentFeatures.forEach((indFeat) -> {
             values.put(indFeat, null);
@@ -263,7 +282,7 @@ public class DatasetFactory {
         });
         de.setValues(values);
         dataset.getDataEntry().add(de);
-        
+
         return dataset;
     }
 }

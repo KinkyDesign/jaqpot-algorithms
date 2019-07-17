@@ -141,9 +141,7 @@ public class TaskResource {
     @TokenSecured({RoleEnum.DEFAULT_USER})
     @Produces({MediaType.APPLICATION_JSON, "text/uri-list"})
     @Path("/{id}")
-    @Parameters({
-        @Parameter(name = "subjectid", schema = @Schema(implementation = String.class), in = ParameterIn.HEADER),
-        @Parameter(name = "id", description = "ID of the task to be retrieved", schema = @Schema(implementation = String.class), in = ParameterIn.PATH)})
+   
     @Operation(summary = "Finds Task by Id",
             description = "Finds specified Task",
             responses = {
@@ -154,8 +152,8 @@ public class TaskResource {
                 @ApiResponse(responseCode = "500", description = "Internal server error - this request cannot be served.")
             })
     public Response getTask(  
-            @HeaderParam("subjectid") String subjectId,
-            @PathParam("id") String id) {
+            @Parameter(name = "subjectid", schema = @Schema(implementation = String.class)) @HeaderParam("subjectid") String subjectId,
+            @Parameter(name = "id", description = "ID of the task to be retrieved", schema = @Schema(implementation = String.class)) @PathParam("id") String id) {
         Task task = taskHandler.find(id);
         if (task == null) {
             throw new NotFoundException("Task " + uriInfo.getPath() + "not found");
@@ -177,9 +175,7 @@ public class TaskResource {
     @TokenSecured({RoleEnum.DEFAULT_USER})
     @Produces(MediaType.APPLICATION_JSON)
     @Path("/{id}")
-    @Parameters({
-        @Parameter(name = "id", description = "ID of the task which is to be cancelled.", required = true, schema = @Schema(implementation = String.class), in = ParameterIn.PATH),
-        @Parameter(name = "subjectid", schema = @Schema(implementation = String.class), in = ParameterIn.HEADER)})
+   
     @Operation(summary = "Deletes a Task of given ID",
             description = "Deletes a Task given its ID in the URI. When the DELETE method is applied, the task "
             + "is interrupted and tagged as CANCELLED. Note that this method does not return a response "
@@ -194,8 +190,8 @@ public class TaskResource {
                 @ApiResponse(responseCode = "500", description = "Internal server error - this request cannot be served.")
             })
     public Response deleteTask(
-            @PathParam("id") String id,
-            @HeaderParam("subjectid") String subjectId) throws JaqpotForbiddenException {
+            @Parameter(name = "id", description = "ID of the task which is to be cancelled.", required = true, schema = @Schema(implementation = String.class)) @PathParam("id") String id,
+            @Parameter(name = "subjectid", schema = @Schema(implementation = String.class)) @HeaderParam("subjectid") String subjectId) throws JaqpotForbiddenException {
 
         Task task = taskHandler.find(id);
         if (task == null) {
