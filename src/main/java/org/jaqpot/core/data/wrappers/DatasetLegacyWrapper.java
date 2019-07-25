@@ -42,89 +42,90 @@ public class DatasetLegacyWrapper {
         ROG randomStringGenerator = new ROG(true);
 
         //HashSet<String> features = dataset.getFeatures().stream().map(FeatureInfo::getKey).collect(Collectors.toCollection(HashSet::new));
-        
         ArrayList<FeatureInfo> features = new ArrayList(dataset.getFeatures());
-        int size = features.size();
-        Set<FeatureInfo> fs = IntStream.range(0, size - 1)
-                .mapToObj(i -> {
-                    FeatureInfo f = new FeatureInfo();
-                    f.setName(features.get(i).getName());
-                    f.setURI(features.get(i).getURI());
-                    f.setConditions(features.get(i).getConditions());
-                    f.setCategory(features.get(i).getCategory());
-                    f.setKey(Integer.toString(i));
-                    return f;
-                }).collect(Collectors.toSet());
-        dataset.setFeatures(fs);
-        
-        HashMap<String,String> keyNames = new HashMap();
-        fs.stream().forEach(f -> {
-                keyNames.put(f.getName(), f.getKey());
-         });
-                 
-        List<DataEntry> dataEntries = dataset.getDataEntry()
-                .parallelStream()
-                .map(dataEntry -> {
-                    DataEntry newEntry = new DataEntry();
-                    newEntry.setEntryId(dataEntry.getEntryId());
-                    TreeMap<String, Object> values = new TreeMap<>();
-                    dataEntry.getValues()
-                    .keySet()
-                    .stream()
-                    .filter(key -> keyNames.containsKey(key))
-                    .forEach(key -> {
-                        
-                        values.put(keyNames.get(key), dataEntry.getValues().get(key));
+        if (features != null && !features.isEmpty()) {
+            int size = features.size();
+            Set<FeatureInfo> fs = IntStream.range(0, size - 1)
+                    .mapToObj(i -> {
+                        FeatureInfo f = new FeatureInfo();
+                        f.setName(features.get(i).getName());
+                        f.setURI(features.get(i).getURI());
+                        f.setConditions(features.get(i).getConditions());
+                        f.setCategory(features.get(i).getCategory());
+                        f.setKey(Integer.toString(i));
+                        return f;
+                    }).collect(Collectors.toSet());
+            dataset.setFeatures(fs);
 
-                    });
-                    newEntry.setValues(values);
-                    return newEntry;
-                })
-                .collect(Collectors.toList());
-        dataset.setDataEntry(dataEntries);
-        
+            HashMap<String, String> keyNames = new HashMap();
+            fs.stream().forEach(f -> {
+                keyNames.put(f.getName(), f.getKey());
+            });
+
+            List<DataEntry> dataEntries = dataset.getDataEntry()
+                    .parallelStream()
+                    .map(dataEntry -> {
+                        DataEntry newEntry = new DataEntry();
+                        newEntry.setEntryId(dataEntry.getEntryId());
+                        TreeMap<String, Object> values = new TreeMap<>();
+                        dataEntry.getValues()
+                        .keySet()
+                        .stream()
+                        .filter(key -> keyNames.containsKey(key))
+                        .forEach(key -> {
+
+                            values.put(keyNames.get(key), dataEntry.getValues().get(key));
+
+                        });
+                        newEntry.setValues(values);
+                        return newEntry;
+                    })
+                    .collect(Collectors.toList());
+            dataset.setDataEntry(dataEntries);
+
  //       for (DataEntry dataEntry : dataset.getDataEntry()) {
- //           HashSet<String> entryFeatures = new HashSet<>(dataEntry.getValues().keySet());
+            //           HashSet<String> entryFeatures = new HashSet<>(dataEntry.getValues().keySet());
 //            if (!entryFeatures.equals(features)) {
 //                throw new IllegalArgumentException("Invalid Dataset - DataEntry URIs do not match with Feature URIs. "
 //                        + " Problem was found when parsing " + dataEntry.getEntryId());
 //            }
-            
- //       }
+            //       }
+            dataset.setTotalRows(dataset.getDataEntry().size());
+            dataset.setTotalColumns(dataset.getDataEntry()
+                    .stream()
+                    .max((e1, e2) -> Integer.compare(e1.getValues().size(), e2.getValues().size()))
+                    .orElseGet(() -> {
+                        DataEntry de = new DataEntry();
+                        de.setValues(new TreeMap<>());
+                        return de;
+                    })
+                    .getValues().size());
+            dataset.setVisible(Boolean.TRUE);
 
-        dataset.setTotalRows(dataset.getDataEntry().size());
-        dataset.setTotalColumns(dataset.getDataEntry()
-                .stream()
-                .max((e1, e2) -> Integer.compare(e1.getValues().size(), e2.getValues().size()))
-                .orElseGet(() -> {
-                    DataEntry de = new DataEntry();
-                    de.setValues(new TreeMap<>());
-                    return de;
-                })
-                .getValues().size());
-        dataset.setVisible(Boolean.TRUE);
-
-        List<DataEntry> dataEntryList = dataset.getDataEntry();
-        dataset.setDataEntry(new LinkedList<>());
-        datasetHandler.create(dataset);
-        Set<FeatureInfo> finfo = dataset.getFeatures();
-        finfo.forEach(f -> {
-            String[] fIdAr = f.getURI().split("/");
-            String fid = fIdAr[fIdAr.length - 1];
-            Feature feature = fh.find(fid);
-            if (feature != null) {
-                Set<String> hasSources = new HashSet();
-                hasSources.add(
-                        pm.getPropertyOrDefault(PropertyManager.PropertyType.JAQPOT_BASE)
-                        + "/dataset/" + dataset.getId());
-                feature.getMeta().setHasSources(hasSources);
-                fh.edit(feature);
+            List<DataEntry> dataEntryList = dataset.getDataEntry();
+            dataset.setDataEntry(new LinkedList<>());
+            datasetHandler.create(dataset);
+            Set<FeatureInfo> finfo = dataset.getFeatures();
+            finfo.forEach(f -> {
+                String[] fIdAr = f.getURI().split("/");
+                String fid = fIdAr[fIdAr.length - 1];
+                Feature feature = fh.find(fid);
+                if (feature != null) {
+                    Set<String> hasSources = new HashSet();
+                    hasSources.add(
+                            pm.getPropertyOrDefault(PropertyManager.PropertyType.JAQPOT_BASE)
+                            + "/dataset/" + dataset.getId());
+                    feature.getMeta().setHasSources(hasSources);
+                    fh.edit(feature);
+                }
+            });
+            for (DataEntry dataentry : dataEntryList) {
+                dataentry.setId(randomStringGenerator.nextString(14));
+                dataentry.setDatasetId(dataset.getId());
+                dataEntryHandler.create(dataentry);
             }
-        });
-        for (DataEntry dataentry : dataEntryList) {
-            dataentry.setId(randomStringGenerator.nextString(14));
-            dataentry.setDatasetId(dataset.getId());
-            dataEntryHandler.create(dataentry);
+        } else {
+            throw new NullPointerException();
         }
     }
 
