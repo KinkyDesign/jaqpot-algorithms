@@ -30,6 +30,7 @@
 package org.jaqpot.core.model.factory;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
@@ -44,6 +45,7 @@ import org.jaqpot.core.model.DataEntry;
 import org.jaqpot.core.model.dto.dataset.Dataset;
 import org.jaqpot.core.model.dto.dataset.FeatureInfo;
 import org.jaqpot.core.model.dto.dataset.EntryId;
+import org.jaqpot.core.model.dto.dataset.LegacyFormatter;
 import org.jaqpot.core.model.util.ROG;
 
 /**
@@ -80,10 +82,6 @@ public class DatasetFactory {
         return dataset;
     }
 
-    
-     
-    
-     
     public static void addEmptyRows(Dataset dataset, Integer rows) {
         List<DataEntry> dataEntries = IntStream.range(1, rows + 1)
                 .mapToObj(i -> {
@@ -150,48 +148,50 @@ public class DatasetFactory {
 
     public static Dataset select(Dataset dataset, HashSet<String> features) {
         Dataset result = new Dataset();
-        result.setId(dataset.getId());
-        result.setMeta(dataset.getMeta());
-        //Integer num_features = features.size();
-        //ref: https://stackoverflow.com/questions/24010109/java-8-stream-reverse-order
-        //List<Integer> index = IntStream.range(0, num_features-1).map(i->-i+num_features-1).boxed().collect(Collectors.toList());
-        //Stack index_stack = new Stack();
-        //index_stack.addAll(index);
-        Set<String> keyValues = new HashSet();
-        
-        Set<FeatureInfo> ds_features = dataset.getFeatures();
-        ds_features.stream().forEach(feature -> {
-                 if(features.contains(feature.getURI())){
-                       keyValues.add(feature.getKey());
-                 }
-        });
-        
-        List<DataEntry> dataEntries = dataset.getDataEntry()
-                .parallelStream()
-                .map(dataEntry -> {
-                    DataEntry newEntry = new DataEntry();
-                    newEntry.setEntryId(dataEntry.getEntryId());
-                    TreeMap<String, Object> values = new TreeMap<>();
-                    dataEntry.getValues()
-                    .keySet()
-                    .stream()
-                    //.filter(feature -> features.contains(feature))
-                    .filter(key -> keyValues.contains(key))        
-                    .forEach(key -> {
-                        
-                        values.put(key, dataEntry.getValues().get(key));
+        //Potential mismatch with legacy format - resolution
+        Set<String> entryValueKeys = new HashSet<>(dataset.getDataEntry().get(0).getValues().keySet());
+        Set<FeatureInfo> dsFeatures = dataset.getFeatures()
+                .stream()
+                .filter(feature -> features.contains(feature.getURI()))
+                .collect(Collectors.toSet());
 
-                    });
-                    newEntry.setValues(values);
-                    return newEntry;
-                })
-                .collect(Collectors.toList());
-        result.setDataEntry(dataEntries);
-        Set<FeatureInfo> featureInfo = new HashSet<>();
-        dataset.getFeatures().stream()
-                .filter(f -> keyValues.contains(f.getKey()))
-                .forEach(f -> featureInfo.add(f));
-        result.setFeatures(featureInfo);
+        if (entryValueKeys.contains(features)) {
+            LegacyFormatter lf = new LegacyFormatter();
+            result = lf.format(dataset, dsFeatures);
+        } else {
+            result.setId(dataset.getId());
+            result.setMeta(dataset.getMeta());
+            HashSet keyValues = new HashSet();
+
+            dsFeatures.stream().forEach(feature -> {
+                keyValues.add(feature.getKey());
+            });
+
+            List<DataEntry> dataEntries = dataset.getDataEntry()
+                    .parallelStream()
+                    .map(dataEntry -> {
+                        DataEntry newEntry = new DataEntry();
+                        TreeMap<String, Object> values = new TreeMap<>();
+                        dataEntry.getValues()
+                        .keySet()
+                        .stream()
+                        //.filter(feature -> features.contains(feature))
+                        .filter(key -> keyValues.contains(key))
+                        .forEach(key -> {
+
+                            values.put(key, dataEntry.getValues().get(key));
+
+                        });
+                        newEntry.setValues(values);
+                        return newEntry;
+                    })
+                    .collect(Collectors.toList());
+            result.setDataEntry(dataEntries);
+
+            result.setFeatures(dsFeatures);
+
+        }
+
         return result;
     }
 

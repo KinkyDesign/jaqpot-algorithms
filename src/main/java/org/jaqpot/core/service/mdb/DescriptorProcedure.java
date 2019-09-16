@@ -39,15 +39,18 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import org.jaqpot.core.model.dto.dataset.CalculationsFormatter;
 
 @MessageDriven(activationConfig = {
     @ActivationConfigProperty(propertyName = "destinationLookup",
-            propertyValue = "java:jboss/exported/jms/topic/descriptor")
-    ,
-        @ActivationConfigProperty(propertyName = "destinationType",
+            propertyValue = "java:jboss/exported/jms/topic/descriptor"),
+    @ActivationConfigProperty(propertyName = "destinationType",
             propertyValue = "javax.jms.Topic")
 })
 public class DescriptorProcedure extends AbstractJaqpotProcedure implements MessageListener {
@@ -155,7 +158,6 @@ public class DescriptorProcedure extends AbstractJaqpotProcedure implements Mess
             Dataset subDataset = null;
 
             //Case of all applying descriptor service to all featureURIs
-            
             if (featureURIs.toString().contains("all")) {
                 HashSet<String> featUris = new HashSet();
                 //ArrayList<String> featUris = new ArrayList();
@@ -164,7 +166,7 @@ public class DescriptorProcedure extends AbstractJaqpotProcedure implements Mess
                 });
                 subDataset = DatasetFactory.select(initialDataset, featUris);
             } else {
-                subDataset = DatasetFactory.select(initialDataset, (HashSet<String>)featureURIs);
+                subDataset = DatasetFactory.select(initialDataset, (HashSet<String>) featureURIs);
             }
 
             subDataset.setMeta(null);
@@ -197,7 +199,14 @@ public class DescriptorProcedure extends AbstractJaqpotProcedure implements Mess
             if (dataset.getDataEntry() == null || dataset.getDataEntry().isEmpty()) {
                 throw new IllegalArgumentException("Resulting dataset is empty");
             } else {
+                Set<String> entryValueKeys = new HashSet<>(dataset.getDataEntry().get(0).getValues().keySet());
+                HashSet<String> featuresIndxs = dataset.getFeatures().stream().map(FeatureInfo::getKey).collect(Collectors.toCollection(HashSet::new));
+                if (!featuresIndxs.equals(entryValueKeys)) {
+                    CalculationsFormatter cf = new CalculationsFormatter();
+                    dataset = cf.format(dataset, dataset.getFeatures());
+                }
                 datasetLegacyWrapper.create(dataset);
+
             }
             progress(100f, "Dataset saved successfully.");
             checkCancelled();

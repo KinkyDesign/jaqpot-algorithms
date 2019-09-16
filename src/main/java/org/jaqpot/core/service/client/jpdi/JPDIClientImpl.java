@@ -90,7 +90,7 @@ public class JPDIClientImpl implements JPDIClient {
     private final AlgorithmHandler algorithmHandler;
     private final String baseURI;
     private final ROG randomStringGenerator;
-    private  ExecutorService PIPER = Executors.newCachedThreadPool();
+    private ExecutorService PIPER = Executors.newCachedThreadPool();
 
     private final Map<String, Future> futureMap;
 
@@ -198,10 +198,10 @@ public class JPDIClientImpl implements JPDIClient {
     @Override
     public Future<Dataset> descriptor(Dataset dataset, Descriptor descriptor, Map<String, Object> parameters, String taskId) {
         CompletableFuture<Dataset> futureDataset = new CompletableFuture<>();
-        
+
         //TODO Create a calculateService for algorithms.
         final HttpPost request = new HttpPost(descriptor.getDescriptorService());
-       
+
         DescriptorRequest descriptorRequest = new DescriptorRequest();
         descriptorRequest.setDataset(dataset);
         descriptorRequest.setParameters(parameters);
@@ -223,28 +223,25 @@ public class JPDIClientImpl implements JPDIClient {
 //                });
 //            entity = new InputStreamEntity(pipedInputStream, ContentType.APPLICATION_JSON);
 //       
-               
 
-        //PipedOutputStream out = new PipedOutputStream();
-        //PipedInputStream in;
-        
-        //try {
-            String serDescrReq = serializer.write(descriptorRequest);
-          //  in = new PipedInputStream(out);
-            
-        //} catch (IOException ex) {
-          //  futureDataset.completeExceptionally(ex);
-           // return futureDataset;
-        //}
-        //InputStreamEntity entity = new InputStreamEntity(in, ContentType.APPLICATION_JSON);
-        HttpEntity entity = new StringEntity(serDescrReq, ContentType.APPLICATION_JSON);
-        //entity.setChunked(true);
-       
+        final PipedOutputStream out = new PipedOutputStream();
+        final PipedInputStream in;
+
+        try {
+            //String serDescrReq = serializer.write(descriptorRequest);
+            in = new PipedInputStream(out);
+
+        } catch (IOException ex) {
+            futureDataset.completeExceptionally(ex);
+            return futureDataset;
+        }
+        final InputStreamEntity entity = new InputStreamEntity(in, ContentType.APPLICATION_JSON);
+        //HttpEntity entity = new StringEntity(serDescrReq, ContentType.APPLICATION_JSON);
+        entity.setChunked(true);
+
         request.setEntity(entity);
         request.addHeader("Accept", "application/json");
-        
-        //request.addHeader("Content-Type", "application/json");
-        
+
         Future futureResponse = client.execute(request, new FutureCallback<HttpResponse>() {
 
             @Override
@@ -300,12 +297,12 @@ public class JPDIClientImpl implements JPDIClient {
             }
 
         });
-        //serializer.write(calculateRequest, out);
-//        try {
-//            pipedOutputStream.close();
-//        } catch (IOException ex) {
-//            futureDataset.completeExceptionally(ex);
-//        }
+        serializer.write(descriptorRequest, out);
+        try {
+            out.close();
+        } catch (IOException ex) {
+            futureDataset.completeExceptionally(ex);
+        }
 
         futureMap.put(taskId, futureResponse);
         return futureDataset;
@@ -336,7 +333,6 @@ public class JPDIClientImpl implements JPDIClient {
 
         request.setEntity(entity);
         request.addHeader("Accept", "application/json");
-       
 
         Future futureResponse = client.execute(request, new FutureCallback<HttpResponse>() {
 

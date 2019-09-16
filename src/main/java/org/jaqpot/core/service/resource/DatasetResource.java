@@ -1282,6 +1282,7 @@ public class DatasetResource {
                 e.printStackTrace();
             }
         }
+        
         populateFeatures(dataset);
 
         ROG randomStringGenerator = new ROG(true);
@@ -1333,8 +1334,8 @@ public class DatasetResource {
                 dataEntry.setValues(values);
                 EntryId entryId = new EntryId();
                 entryId.setName("row" + count);
-                entryId.setURI(propertyManager.getProperty(PropertyManager.PropertyType.JAQPOT_BASE_SERVICE) + "substance/" + new ROG(true).nextString(12));
-                entryId.setOwnerUUID("7da545dd-2544-43b0-b834-9ec02553f7f2");
+                //entryId.setURI(propertyManager.getProperty(PropertyManager.PropertyType.JAQPOT_BASE_SERVICE) + "substance/" + new ROG(true).nextString(12));
+                //entryId.setOwnerUUID("7da545dd-2544-43b0-b834-9ec02553f7f2");
 
                 dataEntry.setEntryId(entryId);
                 dataEntryList.add(dataEntry);
