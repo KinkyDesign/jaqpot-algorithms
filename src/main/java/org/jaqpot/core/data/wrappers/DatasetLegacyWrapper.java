@@ -38,9 +38,8 @@ public class DatasetLegacyWrapper {
         for (DataEntry dataEntry : dataset.getDataEntry()) {
             HashSet<String> entryFeatures = new HashSet<>(dataEntry.getValues().keySet());
             if (!entryFeatures.equals(features)) {
-                System.out.println("contains");
-                //throw new IllegalArgumentException("Invalid Dataset - DataEntry URIs do not match with Feature URIs. "
-                //      + " Problem was found when parsing " + dataEntry.getEntryId());
+                throw new IllegalArgumentException("Invalid Dataset - DataEntry URIs do not match with Feature URIs. "
+                     + " Problem was found when parsing " + dataEntry.getEntryId());
             } 
         }
 
