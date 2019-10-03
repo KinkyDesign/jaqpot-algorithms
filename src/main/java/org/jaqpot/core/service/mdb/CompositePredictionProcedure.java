@@ -15,6 +15,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import javax.ejb.ActivationConfigProperty;
 import javax.ejb.EJB;
 import javax.ejb.EJBTransactionRolledbackException;
@@ -48,6 +49,7 @@ import org.jaqpot.core.model.Model;
 import org.jaqpot.core.model.Task;
 import org.jaqpot.core.model.builder.FeatureBuilder;
 import org.jaqpot.core.model.builder.MetaInfoBuilder;
+import org.jaqpot.core.model.dto.dataset.CalculationsFormatter;
 import org.jaqpot.core.model.dto.dataset.Dataset;
 import org.jaqpot.core.model.dto.dataset.FeatureInfo;
 import org.jaqpot.core.model.factory.DatasetFactory;
@@ -224,8 +226,15 @@ public class CompositePredictionProcedure extends AbstractJaqpotProcedure implem
             if (dataset.getDataEntry() == null || dataset.getDataEntry().isEmpty()) {
                 throw new IllegalArgumentException("Resulting dataset is empty");
             } else {
+                Set<String> entryValueKeys = new HashSet<>(dataset.getDataEntry().get(0).getValues().keySet());
+                HashSet<String> featuresIndxs = dataset.getFeatures().stream().map(FeatureInfo::getKey).collect(Collectors.toCollection(HashSet::new));
+                if (!featuresIndxs.equals(entryValueKeys)) {
+                    CalculationsFormatter cf = new CalculationsFormatter();
+                    dataset = cf.format(dataset, dataset.getFeatures());
+                }
                 datasetLegacyWrapper.create(dataset);
             }
+            
             progress(100f, "Dataset saved successfully.");
             checkCancelled();
             progress("Calculation Task is now completed.");
@@ -244,7 +253,7 @@ public class CompositePredictionProcedure extends AbstractJaqpotProcedure implem
         String dataset_uri = messageBody.get("generatedDatasetURI").toString();
         String modelId = messageBody.get("modelId").toString();
         String creator = messageBody.get("creator").toString();
-        String doa = messageBody.get("doa").toString();
+     //   String doa = messageBody.get("doa").toString();
 
         Model model = null;
         try {
@@ -307,9 +316,9 @@ public class CompositePredictionProcedure extends AbstractJaqpotProcedure implem
             datasetMeta.setCreators(creators);
 
             Doa doaM = null;
-            if (doa != null && doa.equals("true")) {
-                doaM = doaHandler.findBySourcesWithDoaMatrix("model/" + model.getId());
-            }
+//            if (doa != null && doa.equals("true")) {
+//                doaM = doaHandler.findBySourcesWithDoaMatrix("model/" + model.getId());
+//            }
 
             progress("Starting Prediction...");
 
@@ -374,7 +383,6 @@ public class CompositePredictionProcedure extends AbstractJaqpotProcedure implem
 
     }
 
-    
     //Copies Features that were in the initial Dataset
     private void copyFeatures(@NotNull Dataset dataset, String datasetURI) throws JaqpotDocumentSizeExceededException {
         for (FeatureInfo featureInfo : dataset.getFeatures()) {
