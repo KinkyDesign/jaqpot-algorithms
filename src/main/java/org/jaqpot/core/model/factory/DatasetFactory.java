@@ -30,7 +30,6 @@
 package org.jaqpot.core.model.factory;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
@@ -40,13 +39,14 @@ import java.util.TreeMap;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import javax.inject.Inject;
 import org.jaqpot.core.model.builder.MetaInfoBuilder;
 import org.jaqpot.core.model.DataEntry;
 import org.jaqpot.core.model.dto.dataset.Dataset;
 import org.jaqpot.core.model.dto.dataset.FeatureInfo;
 import org.jaqpot.core.model.dto.dataset.EntryId;
-import org.jaqpot.core.model.dto.dataset.LegacyFormatter;
 import org.jaqpot.core.model.util.ROG;
+import org.jaqpot.core.properties.PropertyManager;
 
 /**
  *
@@ -54,6 +54,7 @@ import org.jaqpot.core.model.util.ROG;
  * @author Pantelis Sopasakis
  */
 public class DatasetFactory {
+
 
     public static Dataset createEmpty(Integer rows) {
         Dataset dataset = new Dataset();
@@ -73,6 +74,47 @@ public class DatasetFactory {
         ROG randomStringGenerator = new ROG(true);
         dataset.setId(randomStringGenerator.nextString(14));
         dataset.setFeatures(new HashSet<>());
+        dataset.setMeta(MetaInfoBuilder.builder()
+                .addTitles("Empty dataset")
+                .addDescriptions("Empty dataset")
+                .addCreators(new String[0])
+                .build());
+
+        return dataset;
+    }
+
+    public static Dataset create(List content, String featureTemplate) {
+
+        int rows = content.size();
+        int numFeatures = 1;
+        //int numColumns = numFeatures;
+        Dataset dataset = new Dataset();
+
+        List<DataEntry> dataEntries = IntStream.range(0, rows)
+                .mapToObj((int i) -> {
+                    DataEntry de = new DataEntry();
+                    TreeMap values = new TreeMap<>();
+                    values.put(Integer.toString(numFeatures - 1), content.get(i));
+                    de.setValues(values);
+                    EntryId s = new EntryId();
+                    s.setName(Integer.toString(i));
+                    s.setURI("/entryId/" + i);
+                    de.setEntryId(s);
+                    return de;
+                }).collect(Collectors.toList());
+
+        dataset.setDataEntry(dataEntries);
+        dataset.setId(UUID.randomUUID().toString());
+        dataset.setVisible(Boolean.TRUE);
+        ROG randomStringGenerator = new ROG(true);
+        dataset.setId(randomStringGenerator.nextString(14));
+        FeatureInfo fi = new FeatureInfo();
+        fi.setKey(Integer.toString(numFeatures - 1));
+        fi.setName(featureTemplate.split("feature/")[1]);
+        fi.setURI(featureTemplate + "/" + randomStringGenerator.nextString(14));
+        Set<FeatureInfo> features = new HashSet();
+        features.add(fi);
+        dataset.setFeatures(features);
         dataset.setMeta(MetaInfoBuilder.builder()
                 .addTitles("Empty dataset")
                 .addDescriptions("Empty dataset")
@@ -148,50 +190,48 @@ public class DatasetFactory {
 
     public static Dataset select(Dataset dataset, HashSet<String> features) {
         Dataset result = new Dataset();
-        //Potential mismatch with legacy format - resolution
-        Set<String> entryValueKeys = new HashSet<>(dataset.getDataEntry().get(0).getValues().keySet());
-        Set<FeatureInfo> dsFeatures = dataset.getFeatures()
-                .stream()
-                .filter(feature -> features.contains(feature.getURI()))
-                .collect(Collectors.toSet());
+        result.setId(dataset.getId());
+        result.setMeta(dataset.getMeta());
+        //Integer num_features = features.size();
+        //ref: https://stackoverflow.com/questions/24010109/java-8-stream-reverse-order
+        //List<Integer> index = IntStream.range(0, num_features-1).map(i->-i+num_features-1).boxed().collect(Collectors.toList());
+        //Stack index_stack = new Stack();
+        //index_stack.addAll(index);
+        Set<String> keyValues = new HashSet();
 
-        if (entryValueKeys.contains(features)) {
-            LegacyFormatter lf = new LegacyFormatter();
-            result = lf.format(dataset, dsFeatures);
-        } else {
-            result.setId(dataset.getId());
-            result.setMeta(dataset.getMeta());
-            HashSet keyValues = new HashSet();
-
-            dsFeatures.stream().forEach(feature -> {
+        Set<FeatureInfo> ds_features = dataset.getFeatures();
+        ds_features.stream().forEach(feature -> {
+            if (features.contains(feature.getURI())) {
                 keyValues.add(feature.getKey());
-            });
+            }
+        });
 
-            List<DataEntry> dataEntries = dataset.getDataEntry()
-                    .parallelStream()
-                    .map(dataEntry -> {
-                        DataEntry newEntry = new DataEntry();
-                        TreeMap<String, Object> values = new TreeMap<>();
-                        dataEntry.getValues()
-                        .keySet()
-                        .stream()
-                        //.filter(feature -> features.contains(feature))
-                        .filter(key -> keyValues.contains(key))
-                        .forEach(key -> {
+        List<DataEntry> dataEntries = dataset.getDataEntry()
+                .parallelStream()
+                .map(dataEntry -> {
+                    DataEntry newEntry = new DataEntry();
+                    newEntry.setEntryId(dataEntry.getEntryId());
+                    TreeMap<String, Object> values = new TreeMap<>();
+                    dataEntry.getValues()
+                    .keySet()
+                    .stream()
+                    //.filter(feature -> features.contains(feature))
+                    .filter(key -> keyValues.contains(key))
+                    .forEach(key -> {
 
-                            values.put(key, dataEntry.getValues().get(key));
+                        values.put(key, dataEntry.getValues().get(key));
 
-                        });
-                        newEntry.setValues(values);
-                        return newEntry;
-                    })
-                    .collect(Collectors.toList());
-            result.setDataEntry(dataEntries);
-
-            result.setFeatures(dsFeatures);
-
-        }
-
+                    });
+                    newEntry.setValues(values);
+                    return newEntry;
+                })
+                .collect(Collectors.toList());
+        result.setDataEntry(dataEntries);
+        Set<FeatureInfo> featureInfo = new HashSet<>();
+        dataset.getFeatures().stream()
+                .filter(f -> keyValues.contains(f.getKey()))
+                .forEach(f -> featureInfo.add(f));
+        result.setFeatures(featureInfo);
         return result;
     }
 

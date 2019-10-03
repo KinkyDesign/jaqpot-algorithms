@@ -214,6 +214,7 @@ public class AlgorithmResource {
 
     @POST
     @TokenSecured({RoleEnum.DEFAULT_USER})
+    @Consumes({MediaType.APPLICATION_JSON, "text/uri-list"})
     @Produces({MediaType.APPLICATION_JSON, "text/uri-list"})
     @Operation(
             summary = "Creates Algorithm",
