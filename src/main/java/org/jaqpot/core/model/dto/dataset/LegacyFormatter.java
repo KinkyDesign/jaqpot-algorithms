@@ -17,7 +17,7 @@ import org.jaqpot.core.model.DataEntry;
  *
  * @author anpan
  */
-//Resolve mismatch with legacy format of Datasets. Replace feature uris as keys in value TreeMaps with keys.
+//Resolve mismatch with legacy format of Datasets. Replace feature uris with the corresponding keys included in the TreeMap values.
 public class LegacyFormatter implements Formatter {
 
     @Override

@@ -32,6 +32,7 @@ package org.jaqpot.core.model;
 import java.util.Set;
 import javax.xml.bind.annotation.XmlRootElement;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import org.jaqpot.core.model.dto.dataset.Dataset;
@@ -138,9 +139,15 @@ public class Feature extends JaqpotEntity {
     public Dataset.DescriptorCategory getCategory() {
         return category;
     }
-
+ 
     public void setCategory(Dataset.DescriptorCategory category) {
         this.category = category;
+    }
+    
+    public String getTitle(){
+       List<String> titles = new ArrayList();
+       titles.addAll(this.getMeta().getTitles());
+       return titles.get(0);
     }
 
 }

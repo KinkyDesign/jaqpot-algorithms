@@ -30,23 +30,23 @@
 package org.jaqpot.core.model.factory;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
-import java.util.Stack;
 import java.util.TreeMap;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import javax.inject.Inject;
+import javax.annotation.Nullable;
 import org.jaqpot.core.model.builder.MetaInfoBuilder;
 import org.jaqpot.core.model.DataEntry;
 import org.jaqpot.core.model.dto.dataset.Dataset;
 import org.jaqpot.core.model.dto.dataset.FeatureInfo;
 import org.jaqpot.core.model.dto.dataset.EntryId;
 import org.jaqpot.core.model.util.ROG;
-import org.jaqpot.core.properties.PropertyManager;
 
 /**
  *
@@ -54,7 +54,6 @@ import org.jaqpot.core.properties.PropertyManager;
  * @author Pantelis Sopasakis
  */
 public class DatasetFactory {
-
 
     public static Dataset createEmpty(Integer rows) {
         Dataset dataset = new Dataset();
@@ -83,47 +82,97 @@ public class DatasetFactory {
         return dataset;
     }
 
-    public static Dataset create(List content, String featureTemplate) {
+    public static Dataset create(List<List<Entry<String, String>>> content, @Nullable String featureURITemplate) {
 
         int rows = content.size();
-        int numFeatures = 1;
-        //int numColumns = numFeatures;
+        //numOfFeatures = 1;
         Dataset dataset = new Dataset();
-
+        HashMap<String, String> keyNames = new HashMap();
         List<DataEntry> dataEntries = IntStream.range(0, rows)
-                .mapToObj((int i) -> {
+                .mapToObj((int j) -> {
+                    List<Entry<String, String>> le = content.get(j);
                     DataEntry de = new DataEntry();
-                    TreeMap values = new TreeMap<>();
-                    values.put(Integer.toString(numFeatures - 1), content.get(i));
+                    int numOfFeatures = le.size();
+                    TreeMap values = new TreeMap();
+                    IntStream.range(0, numOfFeatures)
+                    .forEach((int i) -> {
+                        values.put(Integer.toString(i), le.get(i).getValue());
+                        if (j == 0) {
+                            keyNames.put(Integer.toString(i), le.get(i).getKey());
+                        }
+                    });
                     de.setValues(values);
                     EntryId s = new EntryId();
-                    s.setName(Integer.toString(i));
-                    s.setURI("/entryId/" + i);
+                    s.setName(Integer.toString(j));
+                    s.setURI("/entryId/" + j);
                     de.setEntryId(s);
                     return de;
                 }).collect(Collectors.toList());
+        HashSet<FeatureInfo> fiSet = keyNames.entrySet().stream()
+                .map((Entry e) -> {
+                    FeatureInfo fi = new FeatureInfo();
+                    fi.setKey(e.getKey().toString());
+                    fi.setName(e.getValue().toString());
+                    if (featureURITemplate != null) {
+                        ROG randomStringGenerator = new ROG(true);
+                        fi.setURI(featureURITemplate + "/" + randomStringGenerator.nextString(14));
+                    }
+                    return fi;
+                }).collect(Collectors.toCollection(HashSet::new));
 
         dataset.setDataEntry(dataEntries);
         dataset.setId(UUID.randomUUID().toString());
-        dataset.setVisible(Boolean.TRUE);
         ROG randomStringGenerator = new ROG(true);
         dataset.setId(randomStringGenerator.nextString(14));
-        FeatureInfo fi = new FeatureInfo();
-        fi.setKey(Integer.toString(numFeatures - 1));
-        fi.setName(featureTemplate.split("feature/")[1]);
-        fi.setURI(featureTemplate + "/" + randomStringGenerator.nextString(14));
-        Set<FeatureInfo> features = new HashSet();
-        features.add(fi);
-        dataset.setFeatures(features);
+        dataset.setFeatures(fiSet);
         dataset.setMeta(MetaInfoBuilder.builder()
-                .addTitles("Empty dataset")
-                .addDescriptions("Empty dataset")
+                .addTitles("Built dataset")
+                .addDescriptions("Dataset made from content")
                 .addCreators(new String[0])
                 .build());
 
         return dataset;
     }
 
+//    public static Dataset create(List content, String featureTemplate) {
+//
+//        int rows = content.size();
+//        int numFeatures = 1;
+//        Dataset dataset = new Dataset();
+//
+//        List<DataEntry> dataEntries = IntStream.range(0, rows)
+//                .mapToObj((int i) -> {
+//                    DataEntry de = new DataEntry();
+//                    TreeMap values = new TreeMap<>();
+//                    values.put(Integer.toString(numFeatures - 1), content.get(i));
+//                    de.setValues(values);
+//                    EntryId s = new EntryId();
+//                    s.setName(Integer.toString(i));
+//                    s.setURI("/entryId/" + i);
+//                    de.setEntryId(s);
+//                    return de;
+//                }).collect(Collectors.toList());
+//
+//        dataset.setDataEntry(dataEntries);
+//        dataset.setId(UUID.randomUUID().toString());
+//        dataset.setVisible(Boolean.TRUE);
+//        ROG randomStringGenerator = new ROG(true);
+//        dataset.setId(randomStringGenerator.nextString(14));
+//        FeatureInfo fi = new FeatureInfo();
+//        fi.setKey(Integer.toString(numFeatures - 1));
+//        fi.setName(featureTemplate.split("feature/")[1]);
+//        fi.setURI(featureTemplate + "/" + randomStringGenerator.nextString(14));
+//        Set<FeatureInfo> features = new HashSet();
+//        features.add(fi);
+//        dataset.setFeatures(features);
+//        dataset.setMeta(MetaInfoBuilder.builder()
+//                .addTitles("Empty dataset")
+//                .addDescriptions("Empty dataset")
+//                .addCreators(new String[0])
+//                .build());
+//
+//        return dataset;
+//    }
     public static void addEmptyRows(Dataset dataset, Integer rows) {
         List<DataEntry> dataEntries = IntStream.range(1, rows + 1)
                 .mapToObj(i -> {
@@ -188,6 +237,38 @@ public class DatasetFactory {
         return result;
     }
 
+    public static Dataset copy(Dataset dataset, Set<String> features) {
+        Dataset result = new Dataset();
+        result.setId(dataset.getId());
+        result.setMeta(dataset.getMeta());
+
+        List<DataEntry> dataEntries = dataset.getDataEntry()
+                .parallelStream()
+                .map(dataEntry -> {
+                    DataEntry newEntry = new DataEntry();
+                    newEntry.setEntryId(dataEntry.getEntryId());
+                    TreeMap<String, Object> values = new TreeMap<>();
+                    dataEntry.getValues()
+                    .keySet()
+                    .stream()
+                    .filter(feature -> features.contains(feature))
+                    .forEach(feature -> {
+
+                        values.put(feature, dataEntry.getValues().get(feature));
+
+                    });
+                    newEntry.setValues(values);
+                    return newEntry;
+                })
+                .collect(Collectors.toList());
+        result.setDataEntry(dataEntries);
+        Set<FeatureInfo> featureInfo = new HashSet<>();
+        dataset.getFeatures().stream().filter(f -> features.contains(f.getURI())).forEach(f -> featureInfo.add(f));
+        result.setFeatures(featureInfo);
+        return result;
+
+    }
+
     public static Dataset select(Dataset dataset, HashSet<String> features) {
         Dataset result = new Dataset();
         result.setId(dataset.getId());
@@ -215,7 +296,6 @@ public class DatasetFactory {
                     dataEntry.getValues()
                     .keySet()
                     .stream()
-                    //.filter(feature -> features.contains(feature))
                     .filter(key -> keyValues.contains(key))
                     .forEach(key -> {
 
@@ -248,7 +328,12 @@ public class DatasetFactory {
                 DataEntry otherEntry = other.getDataEntry().get(i);
                 dataEntry.getValues().putAll(otherEntry.getValues());
             }
-            dataset.getFeatures().addAll(other.getFeatures());
+
+            other.getFeatures().stream()
+                    .forEach(fi -> {
+                           dataset.setFeature(fi, fi.getKey());
+                    });
+
             return dataset;
         }
     }

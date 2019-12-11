@@ -26,6 +26,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Scanner;
 import java.util.Set;
 import java.util.TreeMap;
@@ -139,16 +140,16 @@ public class ChemPredictorResource {
     CompositePredictionService compositePredictionService;
 
     private static final Logger LOG = Logger.getLogger(DescriptorResource.class.getName());
-    
-    
+
     @POST
     @TokenSecured({RoleEnum.DEFAULT_USER})
     @Path("/apply")
     @Consumes({MediaType.MULTIPART_FORM_DATA})
+  
     @Operation(summary = "SUMMARY",
             description = "DESCRIPTION",
             responses = {
-                @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = Dataset.class)),
+                @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = String.class)),
                         description = ""),
                 @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = ErrorReport.class)), description = ""),
                 @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = ErrorReport.class)), description = "You are not authorized to access this resource"),
@@ -159,10 +160,10 @@ public class ChemPredictorResource {
     public Response apply(
             @Parameter(name = "file", description = "csv file", schema = @Schema(type = "string", format = "binary")) @FormParam("file") String file,
             @Parameter(name = "smilesInput", description = "List of smiles molecules", schema = @Schema(implementation = String.class)) @FormParam("smilesInput") String smilesInput,
-            @Parameter(name = "descriptorId", description = "The id of the descriptor that will be applied", schema = @Schema(implementation = String.class)) @FormParam("descriptorId") String descriptorId,
-            @Parameter(name = "modelId", description = "The id of the model that will be used for prediction", schema = @Schema(implementation = String.class)) @FormParam("modelId") String modelId,
-            @Parameter(name = "featureName", description = "Feature name", schema = @Schema(implementation = String.class)) @FormParam("featureName") String featureName,
+            //@Parameter(name = "algorithmId", schema = @Schema(type = "String")) @FormParam("algorithmId") String algorithmId,
+            @Parameter(name = "predictionFeature", schema = @Schema(type = "String")) @FormParam("predictionFeature") String predictionFeature,
             @Parameter(name = "parameters", description = "The parameters for the descriptor that will be applied", schema = @Schema(implementation = String.class)) @FormParam("parameters") String parameters,
+            @Parameter(name = "modelId", schema = @Schema(type = "String")) @FormParam("modelId") String modelId,
             @Parameter(name = "Authorization", description = "Authorization token", schema = @Schema(implementation = String.class)) @HeaderParam("Authorization") String api_key,
             @Parameter(description = "multipartFormData input", hidden = true) MultipartFormDataInput input)
             throws URISyntaxException, QuotaExceededException, JaqpotDocumentSizeExceededException, ParameterIsNullException, ParameterTypeException, ParameterRangeException, ParameterScopeException, JaqpotNotAuthorizedException {
@@ -171,19 +172,20 @@ public class ChemPredictorResource {
         String apiKey = apiA[1];
         User user = userHandler.find(securityContext.getUserPrincipal().getName());
 
-        long datasetCount = datasetHandler.countAllOfCreator(user.getId());
-        int maxAllowedDatasets = new UserFacade(user).getMaxDatasets();
-
-        if (datasetCount > maxAllowedDatasets) {
-            LOG.info(String.format("User %s has %d datasets while maximum is %d",
-                    user.getId(), datasetCount, maxAllowedDatasets));
-            throw new QuotaExceededException("Dear " + user.getId()
-                    + ", your quota has been exceeded; you already have " + datasetCount + " datasets. "
-                    + "No more than " + maxAllowedDatasets + " are allowed with your subscription.");
-        }
+//        long datasetCount = datasetHandler.countAllOfCreator(user.getId());
+//        int maxAllowedDatasets = new UserFacade(user).getMaxDatasets();
+//
+//        if (datasetCount > maxAllowedDatasets) {
+//            LOG.info(String.format("User %s has %d datasets while maximum is %d",
+//                    user.getId(), datasetCount, maxAllowedDatasets));
+//            throw new QuotaExceededException("Dear " + user.getId()
+//                    + ", your quota has been exceeded; you already have " + datasetCount + " datasets. "
+//                    + "No more than " + maxAllowedDatasets + " are allowed with your subscription.");
+//        }
         Map<String, List<InputPart>> uploadForm = input.getFormDataMap();
         List<InputPart> inputParts = uploadForm.get("file");
-        List<String> smilesList = null;
+        //List<String> smilesList = null;
+        List<List<Entry<String, String>>> smilesList = new ArrayList();
         try {
             smilesInput = uploadForm.get("smilesInput").get(0).getBodyAsString();
         } catch (IOException ex) {
@@ -195,10 +197,22 @@ public class ChemPredictorResource {
             }
         }
 
-        try {
-            descriptorId = uploadForm.get("descriptorId").get(0).getBodyAsString();
+//        try {
+//            algorithmId = uploadForm.get("algorithmId").get(0).getBodyAsString();
+//
+//        } catch (IOException ex) {
+//            Logger.getLogger(ChemPredictorResource.class.getName()).log(Level.SEVERE, null, ex);
+//        }
 
+        try {
             modelId = uploadForm.get("modelId").get(0).getBodyAsString();
+
+        } catch (IOException ex) {
+            Logger.getLogger(ChemPredictorResource.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+        try {
+            predictionFeature = uploadForm.get("predictionFeature").get(0).getBodyAsString();
 
         } catch (IOException ex) {
             Logger.getLogger(ChemPredictorResource.class.getName()).log(Level.SEVERE, null, ex);
@@ -212,18 +226,14 @@ public class ChemPredictorResource {
             }
         }
 
-        if (uploadForm.get("featureName") != null && !uploadForm.get("featureName").isEmpty()) {
-            try {
-                featureName = uploadForm.get("featureName").get(0).getBodyAsString();
-            } catch (IOException ex) {
-                Logger.getLogger(ChemPredictorResource.class.getName()).log(Level.SEVERE, null, ex);
-            }
-        } else {
-            featureName = "smiles";
-        }
+        String featureName = "smiles";
 
-        if (descriptorId == null) {
-            throw new ParameterIsNullException("descriptorId");
+//        if (algorithmId == null) {
+//            throw new ParameterIsNullException("algorithmId");
+//        }
+
+        if (predictionFeature == null) {
+            throw new ParameterIsNullException("predictionFeature");
         }
 
         if (modelId == null) {
@@ -245,7 +255,16 @@ public class ChemPredictorResource {
             }
         } else {
             if (smilesInput != null && !smilesInput.equals("")) {
-                smilesList = Arrays.asList(smilesInput.split(","));
+                List<String> smilesStrings = Arrays.asList(smilesInput.split(","));
+
+                smilesStrings.stream().forEach((String str) -> {
+                               HashMap featMap = new HashMap();
+                               featMap.put("smiles", str);
+                               Entry e = (Entry) featMap.entrySet().iterator().next();
+                               List<Entry<String,String>> featuresList = new ArrayList();
+                               featuresList.add(e);
+                               smilesList.add(featuresList);
+                });
                 String featureTemplate = propertyManager.getProperty(PropertyManager.PropertyType.JAQPOT_BASE_SERVICE) + "feature/" + featureName;
                 dataset = DatasetFactory.create(smilesList, featureTemplate);
             }
@@ -263,13 +282,13 @@ public class ChemPredictorResource {
         //datasetLegacyWrapper.create(dataset);
         String newDatasetURI = propertyManager.getProperty(PropertyManager.PropertyType.JAQPOT_BASE_SERVICE) + "dataset/" + dataset.getId();
         dataset.setDatasetURI(newDatasetURI);
-        // String newFeatureURI = propertyManager.getProperty(PropertyManager.PropertyType.JAQPOT_BASE_SERVICE) + "feature/" + feature.getId();
+        //String newFeatureURI = propertyManager.getProperty(PropertyManager.PropertyType.JAQPOT_BASE_SERVICE) + "feature/" + feature.getId();
         // dataset.getFeatures().iterator().next().setURI(newFeatureURI);
 
         dataset.setFeatured(Boolean.FALSE);
         MetaInfo datasetMeta = MetaInfoBuilder.builder()
-                .addTitles(descriptorId + "-" + modelId + "-" + date.toString())
-                .addDescriptions("Descriptor used: " + descriptorId + "/t" + "ModelId used: " + modelId)
+                .addTitles(" cdk -" + date.toString())
+                .addDescriptions("Descriptor used: cdk")
                 .addComments("Created from raw data entries")
                 .addCreators(aaService.getUserFromSSO(apiKey).getId())
                 .addSources(newDatasetURI)
@@ -278,18 +297,15 @@ public class ChemPredictorResource {
         dataset.setExistence(Dataset.DatasetExistence.DESCRIPTORSADDED);
 
         datasetLegacyWrapper.create(dataset);
-        //featureHandler.create(feature);
+        //       featureHandler.create(feature);
 
         Map<String, Object> options = new HashMap<>();
         options.put("api_key", apiKey);
-        options.put("descriptorId", descriptorId);
         options.put("parameters", parameters);
         options.put("base_uri", uriInfo.getBaseUri().toString());
         options.put("creator", securityContext.getUserPrincipal().getName());
-        //Set<String> featureURIs = new HashSet();
-        // featureURIs.add(newFeatureURI);
         options.put("datasetURI", dataset.getDatasetURI());
-        
+
         HashSet<String> featureURIs = new HashSet();
         featureURIs = dataset.getFeatures().stream()
                 .map(fi -> {
@@ -306,14 +322,13 @@ public class ChemPredictorResource {
         options.put("generatedDatasetURI", generatedDatasetURI);
 
         options.put("dataset_uri", generatedDatasetURI);
-        options.put("modelId", modelId);
         options.put("creator", securityContext.getUserPrincipal().getName());
+        options.put("modelId", modelId);
 
-        Descriptor descriptor = descriptorHandler.find(descriptorId);
+        Descriptor descriptor = descriptorHandler.find("cdk");
         parameterValidator.validate(parameters, descriptor.getParameters());
 
         Task taskCP = compositePredictionService.initiateCompositePrediction(options, securityContext.getUserPrincipal().getName());
-     
 
         return Response.ok(taskCP).build();
 

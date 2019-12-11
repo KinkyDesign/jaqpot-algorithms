@@ -31,19 +31,23 @@ public class CalculationsFormatter implements Formatter {
     @Override
     public Dataset format(Dataset dataset, Set<FeatureInfo> features) {
 
+        //Set<FeatureInfo> features = dataset.getFeatures();
         Dataset result = new Dataset();
         result.setId(dataset.getId());
         result.setMeta(dataset.getMeta());
 
+        int maxKey;
+        int size;
+        ArrayList<FeatureInfo> featuresList = new ArrayList();
+
         HashSet<String> keySet = new HashSet();
-        ArrayList<FeatureInfo> featuresList = features.stream()
+        featuresList = features.stream()
                 .filter(f -> f.getKey() != null)
                 .collect(Collectors.toCollection(ArrayList::new));
 
         featuresList.forEach(f -> keySet.add(f.getKey()));
-
-        int maxKey = keySet.stream().mapToInt(key -> Integer.valueOf(key)).max().getAsInt();
-        int size = features.size() - featuresList.size();
+        maxKey = keySet.stream().mapToInt(key -> Integer.valueOf(key)).max().getAsInt();
+        size = features.size() - featuresList.size();
 
         ArrayList<FeatureInfo> featuresNullKeys = features.stream()
                 .filter(f -> f.getKey() == null)
@@ -62,13 +66,14 @@ public class CalculationsFormatter implements Formatter {
 
         ArrayList<FeatureInfo> fs = new ArrayList();
         featuresWithKeys.forEach(f -> fs.add(f));
+
         featuresList.forEach(f -> fs.add(f));
 
         result.setFeatures(new HashSet(fs));
 
-        HashMap<String, String> keyNames = new HashMap();
+        HashMap<String, String> nameKeys = new HashMap();
         featuresWithKeys.stream().forEach(f -> {
-            keyNames.put(f.getName(), f.getKey());
+            nameKeys.put(f.getName(), f.getKey());
         });
 
         List<DataEntry> dataEntries = dataset.getDataEntry()
@@ -82,19 +87,17 @@ public class CalculationsFormatter implements Formatter {
                     .stream()
                     //.filter(key -> keyNames.containsKey(key))
                     .forEach(key -> {
-                          if (keyNames.containsKey(key)){
-                               values.put(keyNames.get(key), dataEntry.getValues().get(key));
-                          }
-                          else{
-                             values.put(key, dataEntry.getValues().get(key));
-                          }
+                        if (nameKeys.containsKey(key)) {
+                            values.put(nameKeys.get(key), dataEntry.getValues().get(key));
+                        } else {
+                            values.put(key, dataEntry.getValues().get(key));
+                        }
                     });
                     newEntry.setValues(values);
                     return newEntry;
                 })
                 .collect(Collectors.toList());
 
-       
         result.setDataEntry(dataEntries);
 
         return result;

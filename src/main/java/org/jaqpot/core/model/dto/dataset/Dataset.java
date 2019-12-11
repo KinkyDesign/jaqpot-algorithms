@@ -30,9 +30,24 @@
 package org.jaqpot.core.model.dto.dataset;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SequenceWriter;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 import javax.xml.bind.annotation.XmlRootElement;
+
+import com.fasterxml.jackson.dataformat.csv.*;
+import java.io.File;
+import java.io.IOException;
+import java.io.StringWriter;
+import java.util.Arrays;
+import java.util.logging.Level;
+import org.jaqpot.core.data.serialize.*;
+import java.util.logging.Logger;
+import org.jaqpot.core.data.serialize.JacksonJSONSerializer;
 
 import org.jaqpot.core.model.DataEntry;
 import org.jaqpot.core.model.JaqpotEntity;
@@ -199,6 +214,78 @@ public class Dataset extends JaqpotEntity {
 
     public void setOnTrash(Boolean onTrash) {
         this.onTrash = onTrash;
+    }
+
+    public FeatureInfo getFeature(String key) {
+
+        return this.getFeatures().stream()
+                .filter(fi -> fi.getKey().equals(key))
+                .findAny()
+                .get();
+
+    }
+
+    public void setFeature(FeatureInfo fi, String key) {
+
+        HashSet<FeatureInfo> fis = this.getFeatures().stream()
+                .filter(f -> f.getKey().equals(key))
+                .collect(Collectors.toCollection(HashSet::new));
+        if (fis != null && !fis.isEmpty()) {
+            fis.stream()
+                    .forEach((FeatureInfo f) -> {
+                        f.setCategory(fi.getCategory());
+                        f.setConditions(fi.getConditions());
+                        f.setName(fi.getName());
+                        f.setOnt(fi.getOnt());
+                        f.setURI(fi.getURI());
+                        f.setUnits(fi.getUnits());
+                    });
+        } else {
+            this.getFeatures().add(fi);
+        }
+
+    }
+
+    public List<List<String>> toCSV() {
+        //Ref: https://www.baeldung.com/java-converting-json-to-csv
+        List<List<String>> dataSource = Arrays.asList();
+        JacksonJSONSerializer jsonSerializer = new JacksonJSONSerializer();
+
+        ObjectMapper mapper = new ObjectMapper();
+
+        String datasetInJson = jsonSerializer.write(this);
+        java.io.Writer writer = new StringWriter();
+        try {
+            JsonNode jsonTree = new ObjectMapper().readTree(datasetInJson);
+            CsvSchema.Builder csvSchemaBuilder = CsvSchema.builder();
+            JsonNode firstObject = jsonTree.elements().next();
+            firstObject.fieldNames().forEachRemaining(fieldName -> {
+                csvSchemaBuilder.addColumn(fieldName);
+            });
+            CsvSchema csvSchema = csvSchemaBuilder.build().withHeader();
+            try(SequenceWriter csvWriter = new CsvMapper().writerWithDefaultPrettyPrinter().with(csvSchema)
+                    .forType(List.class).writeValues(writer);)
+	{
+		for (List<String> nextRow : dataSource) {
+			csvWriter.write(nextRow);
+		}
+		// Check to see whether dataSource is empty 
+		// and if so write a single empty list to trigger header output
+		if (dataSource.isEmpty()) {
+			csvWriter.write(Arrays.asList());
+		}
+	}
+//            CsvMapper csvMapper = new CsvMapper();
+//            csvMapper.writerFor(JsonNode.class)
+//                     .with(csvSchema)
+//                     .writeValue(new File("src/main/resources/orderLines.csv"), jsonTree);
+//           plainDataset = csvMapper.writerFor(JsonNode.class).with(csvSchema).writeValueAsString(mapper);
+            
+        } catch (IOException ex) {
+            Logger.getLogger(Dataset.class.getName()).log(Level.SEVERE, null, ex);
+        }
+       
+        return dataSource;
     }
 
     @Override

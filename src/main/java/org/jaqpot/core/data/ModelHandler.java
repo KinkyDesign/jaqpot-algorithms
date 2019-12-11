@@ -103,7 +103,7 @@ public class ModelHandler extends AbstractHandler<Model> {
 
     public List<Model> findAllMeta() {
         List<String> fields = new ArrayList<>();
-        fields.add("_id");        
+        fields.add("_id");
         fields.add("dependentFeatures");
         fields.add("independentFeatures");
         fields.add("predictedFeatures");
@@ -122,7 +122,7 @@ public class ModelHandler extends AbstractHandler<Model> {
 
         List<String> fields = new ArrayList<>();
         fields.add("_id");
-        fields.add("meta");        
+        fields.add("meta");
         fields.add("dependentFeatures");
         fields.add("independentFeatures");
         fields.add("predictedFeatures");
@@ -135,10 +135,11 @@ public class ModelHandler extends AbstractHandler<Model> {
         fields.add("linkedModels");
         fields.add("additionalInfo");
         fields.add("meta");
+        fields.add("actualModel");
         return em.find(Model.class, keys, fields).stream().findFirst().orElse(null);
     }
-    
-    public Long countAllOfAlgos(String user,String algo){
+
+    public Long countAllOfAlgos(String user, String algo) {
         Map<String, Object> properties = new HashMap<>();
         properties.put("meta.creators", Arrays.asList(user));
         properties.put("algorithm._id", algo);
@@ -147,4 +148,11 @@ public class ModelHandler extends AbstractHandler<Model> {
         return getEntityManager().countAndNe(Model.class, properties, notProperties);
     }
 
+    
+    public Model findModelBasedOnProperties(Map<String,Object> properties){
+    
+       return em.find(Model.class, properties, Integer.SIZE, Integer.SIZE).stream().findFirst().orElse(null);
+    }
+    
+    
 }

@@ -5,17 +5,22 @@
  */
 package org.jaqpot.core.service.mdb;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import javax.ejb.ActivationConfigProperty;
 import javax.ejb.EJB;
 import javax.ejb.EJBTransactionRolledbackException;
@@ -41,6 +46,7 @@ import org.jaqpot.core.data.ModelHandler;
 import org.jaqpot.core.data.TaskHandler;
 import org.jaqpot.core.data.serialize.JSONSerializer;
 import org.jaqpot.core.data.wrappers.DatasetLegacyWrapper;
+import org.jaqpot.core.model.DataEntry;
 import org.jaqpot.core.model.Descriptor;
 import org.jaqpot.core.model.Doa;
 import org.jaqpot.core.model.Feature;
@@ -128,22 +134,27 @@ public class CompositePredictionProcedure extends AbstractJaqpotProcedure implem
             LOG.log(Level.SEVERE, "JMS message could not be read", ex);
             return;
         }
-
         String taskId = messageBody.get("taskId").toString();
-        String apiKey = messageBody.get("api_key").toString();
+        String modelId = messageBody.get("modelId").toString();
 
-        String parameters = messageBody.get("parameters").toString();
-        String featureUrisSer = messageBody.get("featureURIs").toString();
-        String descriptorId = messageBody.get("descriptorId").toString();
-        String datasetURI = messageBody.get("datasetURI").toString();
-        String generatedDatasetId = messageBody.get("generatedDatasetId").toString();
-        String newDatasetURI = messageBody.get("generatedDatasetURI").toString();
-
+        Model model = modelHandler.findModel(modelId);
         try {
             init(taskId);
             checkCancelled();
             start(Task.Type.PREPARATION);
 
+            String apiKey = messageBody.get("api_key").toString();
+
+            String parameters = messageBody.get("parameters").toString();
+            String datasetURI = messageBody.get("datasetURI").toString();
+            String generatedDatasetId = messageBody.get("generatedDatasetId").toString();
+            String newDatasetURI = messageBody.get("generatedDatasetURI").toString();
+
+            HashSet<String> featureURIs = new HashSet();
+            featureURIs.addAll(model.getIndependentFeatures());
+            featureURIs.addAll(model.getDependentFeatures());
+            Dataset initialDataset = null;
+            Dataset dataset = new Dataset();
             progress(5f, "Descriptor Procedure is now running with ID " + Thread.currentThread().getName());
             progress(10f, "Starting descriptor calculation...");
             checkCancelled();
@@ -153,20 +164,15 @@ public class CompositePredictionProcedure extends AbstractJaqpotProcedure implem
                 parameterMap = serializer.parse(parameters, HashMap.class);
             }
 
-            Set<String> featureURIs = null;
-            if (featureUrisSer != null && !featureUrisSer.isEmpty()) {
-                featureURIs = serializer.parse(featureUrisSer, Set.class);
-            }
-
-            Descriptor descriptor = descriptorHandler.find(descriptorId);
+            Descriptor descriptor = descriptorHandler.find("cdk");
 
             if (descriptor == null) {
-                errNotFound("Descriptor with id:" + descriptorId + " was not found.");
+                errNotFound("Descriptor with id: cdk was not found.");
                 return;
             }
 
             checkCancelled();
-            Dataset initialDataset;
+
             try {
                 initialDataset = client.target(datasetURI)
                         .queryParam("dataEntries", true)
@@ -183,117 +189,149 @@ public class CompositePredictionProcedure extends AbstractJaqpotProcedure implem
                 errNotFound("Dataset with id:" + Arrays.toString(datasetURI.split("/")) + " was not found.");
                 return;
             }
-            Dataset subDataset = null;
+//            Dataset subDataset = null;
+//
+//            //Case of applying descriptor service to all featureURIs
+//            if (featureURIs.toString().contains("all")) {
+//                HashSet<String> featUris = new HashSet();
+//                //ArrayList<String> featUris = new ArrayList();
+//                initialDataset.getFeatures().stream().forEach(f -> {
+//                    featUris.add(f.getURI());
+//                });
+//                subDataset = DatasetFactory.select(initialDataset, featUris);
+//            } else {
+//                subDataset = DatasetFactory.select(initialDataset, (HashSet<String>) featureURIs);
+//            }
+//            subDataset.setMeta(null);
+//            subDataset.setId(null);
+            Future<Dataset> futureDataset = jpdiClient.descriptor(initialDataset, descriptor, parameterMap, taskId);
 
-            //Case of all applying descriptor service to all featureURIs
-            if (featureURIs.toString().contains("all")) {
-                HashSet<String> featUris = new HashSet();
-                //ArrayList<String> featUris = new ArrayList();
-                initialDataset.getFeatures().stream().forEach(f -> {
-                    featUris.add(f.getURI());
-                });
-                subDataset = DatasetFactory.select(initialDataset, featUris);
-            } else {
-                subDataset = DatasetFactory.select(initialDataset, (HashSet<String>) featureURIs);
-            }
+            dataset = futureDataset.get();
 
-            subDataset.setMeta(null);
-            subDataset.setId(null);
-            Future<Dataset> futureDataset = jpdiClient.descriptor(subDataset, descriptor, parameterMap, taskId);
-
-            Dataset dataset = futureDataset.get();
             dataset.setId(generatedDatasetId);
-
-            copyFeatures(initialDataset, newDatasetURI);
-            populateFeatures(dataset, newDatasetURI);
-            dataset = DatasetFactory.mergeColumns(dataset, initialDataset);
-
-            progress("JPDI Descriptor calculation procedure completed successfully.");
-            progress(50f, "Dataset ready.");
-            progress("Saving to database...");
-            checkCancelled();
-
-            MetaInfo datasetMeta = MetaInfoBuilder.builder()
-                    .addTitles((String) messageBody.get("title"))
-                    .addDescriptions((String) messageBody.get("description"))
-                    .addComments("Created by task " + taskId)
-                    .addCreators(aaService.getUserFromSSO(apiKey).getId())
-                    .addSources(datasetURI)
-                    .build();
-            dataset.setMeta(datasetMeta);
-            dataset.setVisible(Boolean.TRUE);
-            dataset.setExistence(Dataset.DatasetExistence.DESCRIPTORSADDED);
-            if (dataset.getDataEntry() == null || dataset.getDataEntry().isEmpty()) {
-                throw new IllegalArgumentException("Resulting dataset is empty");
-            } else {
-                Set<String> entryValueKeys = new HashSet<>(dataset.getDataEntry().get(0).getValues().keySet());
-                HashSet<String> featuresIndxs = dataset.getFeatures().stream().map(FeatureInfo::getKey).collect(Collectors.toCollection(HashSet::new));
-                if (!featuresIndxs.equals(entryValueKeys)) {
-                    CalculationsFormatter cf = new CalculationsFormatter();
-                    dataset = cf.format(dataset, dataset.getFeatures());
-                }
-                datasetLegacyWrapper.create(dataset);
-            }
             
-            progress(100f, "Dataset saved successfully.");
+            
+//            populateFeatures(dataset,newDatasetURI);
+            //dataset = DatasetFactory.mergeColumns(dataset, initialDataset);
+            // dataset = formInputDataset(featureURIs, dataset);
+//            Set<String> entryValueKeys = new HashSet<>(dataset.getDataEntry().get(0).getValues().keySet());
+//            HashSet<String> featuresIndxs = dataset.getFeatures().stream().map(FeatureInfo::getKey).collect(Collectors.toCollection(HashSet::new));
+//            if (!featuresIndxs.equals(entryValueKeys)) {
+//                CalculationsFormatter cf = new CalculationsFormatter();
+//                dataset = cf.format(dataset, dataset.getFeatures());
+//            }
+           
+            List<List<Entry<String, String>>> calculations = new ArrayList();
+            for (DataEntry dataEntry : dataset.getDataEntry()) {
+                HashMap hm = new HashMap();
+                hm.putAll(dataEntry.getValues());
+                List<Entry<String,String>> l = new ArrayList();
+                hm.entrySet().stream()
+                        .forEach(n ->{
+                             l.add((Entry<String,String>)n);
+                        });
+                calculations.add(l);
+            }
+
+            dataset = formInputDataset(featureURIs, calculations);
+//            HashSet tempfn = new HashSet();
+//            HashSet tempfu = new HashSet();
+//            tempfn.add("MDEC-33");
+//            tempfn.add("C3SP3");
+//            tempfn.add("nRings4");
+//            tempfn.add("SCH-6");
+//            dataset.getFeatures().stream()
+//                    .forEach(f->{
+//                        if(tempfn.contains(f.getName())){
+//                       tempfu.add(f.getURI());
+//                        }
+//                    });
+//            
+//            Dataset tempDataset = dataset ;
+//            dataset = DatasetFactory.select(dataset, tempfu);
+//           
+            progress("JPDI Descriptor calculation procedure completed successfully.");
+            //progress(50f, "Dataset ready.");
+            // progress("Saving to database...");
             checkCancelled();
-            progress("Calculation Task is now completed.");
-            complete("dataset/" + dataset.getId());
-        } catch (IllegalArgumentException ex) {
-            LOG.log(Level.SEVERE, "Preparation procedure execution error", ex);
-            errInternalServerError(ex, "JPDI Preparation procedure error");
-        } catch (BadRequestException ex) {
-            errBadRequest(ex, "Error while processing input.");
-            LOG.log(Level.SEVERE, null, ex);
-        } catch (Exception ex) {
-            LOG.log(Level.SEVERE, "JPDI Preparation procedure unknown error", ex);
-            errInternalServerError(ex, "JPDI Preparation procedure unknown error");
-        }
 
-        String dataset_uri = messageBody.get("generatedDatasetURI").toString();
-        String modelId = messageBody.get("modelId").toString();
-        String creator = messageBody.get("creator").toString();
-     //   String doa = messageBody.get("doa").toString();
+//            MetaInfo datasetMeta = MetaInfoBuilder.builder()
+//                    .addTitles((String) messageBody.get("title"))
+//                    .addDescriptions((String) messageBody.get("description"))
+//                    .addComments("Created by task " + taskId)
+//                    .addCreators(aaService.getUserFromSSO(apiKey).getId())
+//                    .addSources(datasetURI)
+            
+//                    .build();
+//            dataset.setMeta(datasetMeta);
+//            dataset.setVisible(Boolean.TRUE);
+//            dataset.setExistence(Dataset.DatasetExistence.DESCRIPTORSADDED);
+//            if (dataset.getDataEntry() == null || dataset.getDataEntry().isEmpty()) {
+//                throw new IllegalArgumentException("Resulting dataset is empty");
+//            } else {
+//                Set<String> entryValueKeys = new HashSet<>(dataset.getDataEntry().get(0).getValues().keySet());
+//                HashSet<String> featuresIndxs = dataset.getFeatures().stream().map(FeatureInfo::getKey).collect(Collectors.toCollection(HashSet::new));
+//                if (!featuresIndxs.equals(entryValueKeys)) {
+//                    CalculationsFormatter cf = new CalculationsFormatter();
+//                    dataset = cf.format(dataset, dataset.getFeatures());
+//                }
+//                datasetLegacyWrapper.create(dataset);
+//            }
+            // progress(100f, "Dataset saved successfully.");
+            // checkCancelled();
+            progress("Calculation Descriptor Task is now completed.");
+            //complete("dataset/" + dataset.getId());
+//        } catch (IllegalArgumentException ex) {
+//            LOG.log(Level.SEVERE, "Preparation procedure execution error", ex);
+//            errInternalServerError(ex, "JPDI Preparation procedure error");
+//        } catch (BadRequestException ex) {
+//            errBadRequest(ex, "Error while processing input.");
+//            LOG.log(Level.SEVERE, null, ex);
+//        } catch (Exception ex) {
+//            LOG.log(Level.SEVERE, "JPDI Preparation procedure unknown error", ex);
+//            errInternalServerError(ex, "JPDI Preparation procedure unknown error");
+//        }
 
-        Model model = null;
-        try {
-            init(taskId);
+            //String dataset_uri = newDatasetURI;
+//        String creator = messageBody.get("creator").toString();
+//        String algorithmId = messageBody.get("algorithmId").toString();
+//        String predictionFeature = messageBody.get("predictionFeature").toString();
             checkCancelled();
             start(Task.Type.PREDICTION);
 
-            progress(5f, "Prediction Task is now running.");
-
-            model = modelHandler.find(modelId);
-            if (model == null) {
-                errNotFound("Model with id:" + modelId + " was not found.");
-                return;
-            }
-            progress(10f, "Model retrieved successfully.");
-            checkCancelled();
-
-            Dataset dataset;
-            if (dataset_uri != null && !dataset_uri.isEmpty()) {
-                progress("Searching dataset...");
-                try {
-                    dataset = client.target(dataset_uri)
-                            .queryParam("dataEntries", true)
-                            .request()
-                            .header("Authorization", "Bearer " + apiKey)
-                            .accept(MediaType.APPLICATION_JSON)
-                            .get(Dataset.class);
-                } catch (NotFoundException e) {
-                    String[] splitted = dataset_uri.split("/");
-                    dataset = datasetLegacyWrapper.find(splitted[splitted.length - 1]);
-                    //dataset = datasetHandler.find(splitted[splitted.length -1]);
-                }
-                dataset.setDatasetURI(dataset_uri);
-                progress("Dataset has been retrieved.");
-            } else {
-                dataset = DatasetFactory.createEmpty(0);
-            }
-            progress(20f);
-            checkCancelled();
-
+//            progress(5f, "Prediction Task is now running.");
+//
+//            Dataset dataset;
+//            if (dataset_uri != null && !dataset_uri.isEmpty()) {
+//                progress("Searching dataset...");
+//                try {
+//                    dataset = client.target(dataset_uri)
+//                            .queryParam("dataEntries", true)
+//                            .request()
+//                            .header("Authorization", "Bearer " + apiKey)
+//                            .accept(MediaType.APPLICATION_JSON)
+//                            .get(Dataset.class);
+//                } catch (NotFoundException e) {
+//                    String[] splitted = dataset_uri.split("/");
+//                    dataset = datasetLegacyWrapper.find(splitted[splitted.length - 1]);
+//                    //dataset = datasetHandler.find(splitted[splitted.length -1]);
+//                }
+//                dataset.setDatasetURI(dataset_uri);
+//                progress("Dataset has been retrieved.");
+//            } else {
+//                dataset = DatasetFactory.createEmpty(0);
+//            }
+//            MetaInfo datasetMeta = dataset.getMeta();
+//            HashSet<String> creators = new HashSet<>(Arrays.asList(creator));
+//            datasetMeta.setCreators(creators);
+//            progress(20f);
+//            checkCancelled();
+//            Map<String,Object> constraints = new HashMap();
+//            constraints.put("algorithm._id", Arrays.asList(algorithmId));
+//            constraints.put("independentFeatureNames",dataset.getFeatures().stream().map((featureInfo) -> {
+//                                                                                           return featureInfo.getName();
+//                                                                                      }).collect(Collectors.toList()));
+            //constraints.put("predictedFeatureName", Arrays.asList(predictionFeature));
             if (model.getTransformationModels() != null && !model.getTransformationModels().isEmpty()) {
                 progress("--", "Processing transformations...");
                 for (String transModelURI : model.getTransformationModels()) {
@@ -311,18 +349,11 @@ public class CompositePredictionProcedure extends AbstractJaqpotProcedure implem
             progress(50f);
             checkCancelled();
 
-            MetaInfo datasetMeta = dataset.getMeta();
-            HashSet<String> creators = new HashSet<>(Arrays.asList(creator));
-            datasetMeta.setCreators(creators);
-
             Doa doaM = null;
-//            if (doa != null && doa.equals("true")) {
-//                doaM = doaHandler.findBySourcesWithDoaMatrix("model/" + model.getId());
-//            }
 
             progress("Starting Prediction...");
 
-            dataset = jpdiClient.predict(dataset, model, datasetMeta, taskId, doaM).get();
+            dataset = jpdiClient.predict(dataset, model, dataset.getMeta(), taskId, doaM).get();
             progress("Prediction completed successfully.");
             progress(80f, "Dataset was built successfully.");
             checkCancelled();
@@ -350,11 +381,11 @@ public class CompositePredictionProcedure extends AbstractJaqpotProcedure implem
             dataset.setFeatured(Boolean.FALSE);
             dataset.setExistence(Dataset.DatasetExistence.PREDICTED);
             dataset.setByModel(model.getId());
+            dataset = DatasetFactory.mergeColumns(dataset, initialDataset);
             datasetLegacyWrapper.create(dataset);
             //datasetHandler.create(dataset);
 
             complete("dataset/" + dataset.getId());
-//            rabbitMQClient.sendMessage(creator,"Prediction:"+dataset.getId()+":"+model.getMeta().getTitles().iterator().next());
 
         } catch (InterruptedException ex) {
             LOG.log(Level.SEVERE, "JPDI Prediction procedure interupted", ex);
@@ -368,14 +399,7 @@ public class CompositePredictionProcedure extends AbstractJaqpotProcedure implem
             LOG.log(Level.INFO, "Task with id:{0} was cancelled", taskId);
 //            sendException(creator,"Error while applying model "+ model.getMeta().getTitles().iterator().next() +". Cancel Error.");
             cancel();
-        } catch (BadRequestException | IllegalArgumentException ex) {
-            errBadRequest(ex, "null");
-        } catch (EJBTransactionRolledbackException ex) {
-            LOG.log(Level.SEVERE, "Task with id:{0} was canceled due to Ejb rollback exception", taskId);
-            errInternalServerError(ex.getCause(), "JPDI could not create dataset");
-            errBadRequest(ex, null);
-//            sendException(creator,"Error while applying model "+ model.getMeta().getTitles().iterator().next() +". Bad Request.");
-        } catch (Exception ex) {
+        }catch (Exception ex) {
             LOG.log(Level.SEVERE, "JPDI Prediction procedure unknown error", ex);
             errInternalServerError(ex, "JPDI Prediction procedure unknown error");
 //            sendException(creator,"Error while applying model "+ model.getMeta().getTitles().iterator().next() +". Unknown Error.");
@@ -406,39 +430,37 @@ public class CompositePredictionProcedure extends AbstractJaqpotProcedure implem
         }
     }
 
-    //Creates Features that were appended to the Dataset
-    private void populateFeatures(@NotNull Dataset dataset, String datasetURI) throws JaqpotDocumentSizeExceededException {
-        for (FeatureInfo featureInfo : dataset.getFeatures()) {
-            String featureURI = null;
-            Feature f;
-            if (featureInfo.getConditions() != null && featureInfo.getConditions().values() != null) {
-                f = FeatureBuilder.builder(new ROG(true).nextString(12))
-                        .addTitles(featureInfo.getURI())
-                        .addIdentifiers(String.valueOf(featureInfo.getConditions().values()))
-                        .addDescriptions(featureInfo.getName())
-                        .addSources(datasetURI)
-                        .build();
-            } else {
-                f = FeatureBuilder.builder(new ROG(true).nextString(12))
-                        .addTitles(featureInfo.getURI())
-                        .addDescriptions(featureInfo.getName())
-                        .addSources(datasetURI)
-                        .build();
-            }
+       private Dataset formInputDataset(@NotNull Set<String> featureURIs, List<List<Entry<String, String>>> calculations) {
+         HashMap<String, String> featureMap = new HashMap();
+            featureURIs.stream()
+                    .map((String featureUri) -> {
+                        String id = featureUri.split("feature/")[1];
+                        Feature feature = featureHandler.find(id);
+                        return feature;
+                    })
+                    .collect(Collectors.toSet())
+                    .stream()
+                    .forEach(feature -> {
+                        featureMap.put(feature.getTitle(), propertyManager.getProperty(PropertyManager.PropertyType.JAQPOT_BASE_SERVICE) + "feature/" + feature.getId());
+                    });
+            int size = calculations.size();
+        List<List<Entry<String, String>>> filteredCalculations = IntStream.range(0, size)
+                .mapToObj( (int i) -> {
+                     List<Entry<String, String>> fle = calculations.get(i).stream()
+                             .filter((Entry e) -> featureMap.containsKey(e.getKey().toString()))
+                             .collect(Collectors.toList());
+                     return  fle;    
+                })
+                .collect(Collectors.toList());
+                
+        Dataset newDataset = DatasetFactory.create(filteredCalculations, propertyManager.getProperty(PropertyManager.PropertyType.JAQPOT_BASE_SERVICE) + "feature/");
 
-            featureHandler.create(f);
-            featureURI = propertyManager.getProperty(PropertyManager.PropertyType.JAQPOT_BASE_SERVICE) + "feature/" + f.getId();
+        newDataset.getFeatures().stream()
+                .filter((featureInfo) -> featureMap.keySet().contains(featureInfo.getName()))
+                .forEach(featureInfo -> {
+                    featureInfo.setURI(featureMap.get(featureInfo.getName()));
+                });
 
-            //Update FeatureURIs in Data Entries
-//            for (DataEntry dataentry : dataset.getDataEntry()) {
-//                Object value = dataentry.getValues().remove(featureInfo.getURI());
-//                dataentry.getValues().put(featureURI, value);
-//            }
-            //Update FeatureURI in Feature Info
-            featureInfo.setConditions(null);
-            featureInfo.setName(featureInfo.getURI());
-            featureInfo.setURI(featureURI);
-        }
+        return newDataset;
     }
-
 }
