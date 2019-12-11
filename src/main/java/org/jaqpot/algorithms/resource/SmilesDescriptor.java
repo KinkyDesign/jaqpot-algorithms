@@ -8,7 +8,7 @@ import org.jaqpot.algorithms.dto.dataset.DataEntry;
 import org.jaqpot.algorithms.dto.dataset.Dataset;
 import org.jaqpot.algorithms.dto.jpdi.CalculateRequest;
 import org.jaqpot.algorithms.dto.jpdi.CalculateResponse;
-import org.jaqpot.algorithms.utils.DatasetFactory;
+import org.jaqpot.algorithms.factory.DatasetFactory;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;

@@ -45,6 +45,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -62,6 +63,9 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import libsvm.svm_model;
 import libsvm.svm_node;
+import org.jaqpot.algorithms.dto.dataset.DataEntry;
+import org.jaqpot.algorithms.dto.dataset.Dataset;
+import org.jaqpot.algorithms.dto.dataset.FeatureInfo;
 import org.jaqpot.algorithms.dto.jpdi.PredictionRequest;
 import org.jaqpot.algorithms.dto.jpdi.PredictionResponse;
 import org.jaqpot.algorithms.dto.jpdi.TrainingRequest;
@@ -75,6 +79,7 @@ import weka.core.Attribute;
 import weka.core.Instance;
 import weka.core.Instances;
 import weka.core.SelectedTag;
+import org.jaqpot.algorithms.factory.DatasetFactory;
 
 /**
  *
@@ -107,16 +112,25 @@ public class WekaSVM {
                         .build();
             }
             List<String> features = request.getDataset()
-                    .getDataEntry()
+                    .getFeatures()
                     .stream()
-                    .findFirst()
-                    .get()
-                    .getValues()
-                    .keySet()
-                    .stream()
+                    .map((f)->{
+                          return f.getURI();
+                    })
                     .collect(Collectors.toList());
 
-            Instances data = InstanceUtils.createFromDataset(request.getDataset(), request.getPredictionFeature());
+            
+//            List<String> features = request.getDataset()
+//                    .getDataEntry()
+//                    .stream()
+//                    .findFirst()
+//                    .get()
+//                    .getValues()
+//                    .keySet()
+//                    .stream()
+//                    .collect(Collectors.toList());
+            String pfk = _pickAValidKey(request);
+            Instances data = InstanceUtils.createFromDataset(request.getDataset(), pfk);
             Map<String, Object> parameters = request.getParameters() != null ? request.getParameters() : new HashMap<>();
 
             LibSVM regressor = new LibSVM();
@@ -233,12 +247,25 @@ public class WekaSVM {
             ByteArrayInputStream bais = new ByteArrayInputStream(modelBytes);
             ObjectInput in = new ObjectInputStream(bais);
             WekaModel model = (WekaModel) in.readObject();
-
-            Classifier classifier = model.getClassifier();
-            Instances data = InstanceUtils.createFromDataset(request.getDataset());
+            
             String dependentFeature = (String) request.getAdditionalInfo();
-            data.insertAttributeAt(new Attribute(dependentFeature), data.numAttributes());
-            data.setClass(data.attribute(dependentFeature));
+            Classifier classifier = model.getClassifier();
+            HashSet<String> features = new HashSet();
+            features.add(dependentFeature);
+//            String dfName = request.getDataset().getFeatures().stream()
+//                                .filter(feature->feature.getURI().equals(dependentFeature))
+//                                .findAny()
+//                                .get()
+//                                .getName();
+            Instances data = InstanceUtils.createFromDataset(_preprocess(request.getDataset(), features));
+          
+            //new key to hold the predicted feature, which corresponds to the dependent feature
+            String pfk = _pickAValidKey((HashSet)request.getDataset().getFeatures());
+            
+            data.insertAttributeAt(new Attribute(pfk), data.numAttributes());
+           // data.insertAttributeAt(new Attribute(dfName), data.numAttributes());
+            data.setClass(data.attribute(pfk));
+           // data.setClass(data.attribute(dfName));
             List<LinkedHashMap<String, Object>> predictions = new ArrayList<>();
 //            data.stream().forEach(instance -> {
 //                try {
@@ -273,5 +300,75 @@ public class WekaSVM {
                     .entity(ex.getMessage())
                     .build();
         }
+    }
+    
+    
+    private String _pickAValidKey(HashSet<FeatureInfo> features){
+    
+        HashSet<String> keySet = new HashSet();
+        features.stream()
+                .filter(f -> f.getKey() != null)
+                .forEach(f -> keySet.add(f.getKey()));
+
+        int maxKey = keySet.stream().mapToInt(key -> Integer.valueOf(key)).max().getAsInt();
+        String key = Integer.toString(maxKey+1);
+
+        return key;
+    }
+    
+    
+     private String _pickAValidKey(TrainingRequest request){
+    
+        String key = request.getDataset().getFeatures().stream()
+                .filter(f -> f.getKey() != null && f.getURI().equals(request.getPredictionFeature()))
+                .findAny()
+                .get().getKey();
+
+        return key;
+    }
+    
+    private Dataset _preprocess(Dataset dataset, HashSet<String> dependentFeatures){
+        dataset = DatasetFactory.remove(dataset, dependentFeatures);
+    
+        return dataset;
+    
+    }
+    
+      private Dataset _preprocess(Dataset dataset){
+        //Makes a dataset that doesn't contain the "dependent feature".
+        
+        Dataset result = new Dataset();
+        String random = Integer.toString(dataset.getFeatures().size()-1);
+        
+        HashSet<FeatureInfo> features = new HashSet();
+        features = dataset.getFeatures().stream()
+                .filter(f->!random.equals(f.getKey()))
+                .collect(Collectors.toCollection(HashSet::new));
+        result.setFeatures(features);
+        
+         List<DataEntry> dataEntries = dataset.getDataEntry()
+                .parallelStream()
+                .map(dataEntry -> {
+                    DataEntry newEntry = new DataEntry();
+                   // newEntry.setEntryId(dataEntry.getEntryId());
+                    TreeMap<String, Object> values = new TreeMap<>();
+                    dataEntry.getValues()
+                    .keySet()
+                    .stream()
+                    .filter(key -> !random.equals(key))
+                    .forEach(key -> {
+
+                        values.put(key, dataEntry.getValues().get(key));
+
+                    });
+                    newEntry.setValues(values);
+                    return newEntry;
+                })
+                .collect(Collectors.toList());
+        result.setDataEntry(dataEntries);
+        
+    result.setDatasetURI(dataset.getDatasetURI());
+        return result;
+    
     }
 }

@@ -34,7 +34,13 @@
  */
 package org.jaqpot.algoriths.weka;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.stream.Collectors;
 import org.jaqpot.algorithms.dto.dataset.Dataset;
+import org.jaqpot.algorithms.dto.dataset.FeatureInfo;
 import weka.core.Attribute;
 import weka.core.FastVector;
 import weka.core.Instance;
@@ -47,9 +53,18 @@ import weka.core.Instances;
  */
 public class InstanceUtils {
 
-    public static Instances createFromDataset(Dataset dataset, String predictionFeature) {
+    public static Instances createFromDataset(Dataset dataset, String predictionFeatureKey) {
 
         FastVector attrInfo = new FastVector();
+        //  HashMap auxMap=new HashMap();
+//        dataset.getFeatures().stream()
+//                .map(featureInfo->{
+//                   
+//                     return new Attribute(featureInfo.getName());
+//                })
+//                .forEach(a -> {
+//                   attrInfo.addElement(a);
+//               });
         dataset.getDataEntry()
                 .stream()
                 .findFirst()
@@ -57,24 +72,62 @@ public class InstanceUtils {
                 .getValues()
                 .keySet()
                 .stream()
-                .map(feature -> {
-                    return new Attribute(feature);
-                }).forEach(a -> {
-            attrInfo.addElement(a);
-        });
+                .filter(key -> !key.equals("0"))
+                .map(featureKey -> {
+
+                    return new Attribute(featureKey);
+
+                })
+                .forEach(a -> {
+                    attrInfo.addElement(a);
+                });
+        
+//        dataset.getDataEntry()
+//                .stream()
+//                .findFirst()
+//                .get()
+//                .getValues()
+//                .keySet()
+//                .stream()
+//                .map(featureKey -> {
+//                    String featName = dataset.getFeatures().stream()
+//                    .filter(f -> f.getKey().equals(featureKey))
+//                    .findAny().get().getName();
+//                    return new Attribute(featName);
+//                }).forEach(a -> {
+//                    attrInfo.addElement(a);
+//                });
 
         Instances data = new Instances(dataset.getDatasetURI(), attrInfo, dataset.getDataEntry().size());
 
-        data.setClass(data.attribute(predictionFeature));
-        dataset.getDataEntry().stream().map((dataEntry) -> {
-            Instance instance = new Instance(dataEntry.getValues().size());
-            dataEntry.getValues().entrySet().stream().forEach(entry -> {
-                instance.setValue(data.attribute(entry.getKey()), Double.parseDouble(entry.getValue().toString()));
-            });
-            return instance;
-        }).forEach((instance) -> {
-            data.add(instance);
+//        String pfName = dataset.getFeatures().stream()
+//                .filter(f -> f.getURI().equals(predictionFeature))
+//                .findAny().get().getName();
+
+        //data.setClass(data.attribute(pfName));
+        data.setClass(data.attribute(predictionFeatureKey));
+        HashSet test = new HashSet();
+        dataset.getDataEntry().stream().forEach(dataEntry -> {
+            //Instance instance = new Instance(dataEntry.getValues().size());
+            test.addAll(dataEntry.getValues().entrySet());
         });
+        dataset.getDataEntry().stream()
+                .map((dataEntry) -> {
+                    Instance instance = new Instance(attrInfo.size());
+                    dataEntry.getValues().entrySet().stream()
+                    .filter(entry -> !entry.getKey().equals("0"))
+                    .forEach(entry -> {
+//                        String featName = dataset.getFeatures().stream()
+//                        .filter(f -> f.getKey().equals(entry.getKey()))
+//                        .findAny().get().getName();
+                        instance.setValue(data.attribute(entry.getKey()), Double.parseDouble(entry.getValue().toString()));
+                        //instance.setValue(data.attribute(featName), Double.parseDouble(entry.getValue().toString()));
+                    });
+                    return instance;
+                })
+                .forEach((instance) -> {
+                    data.add(instance);
+                });
         return data;
     }
 
@@ -88,19 +141,36 @@ public class InstanceUtils {
                 .getValues()
                 .keySet()
                 .stream()
-                .map(feature -> {
-                    return new Attribute(feature);
-                }).forEach(a -> {
-            attrInfo.addElement(a);
-        });
+                //.filter(key -> !key.equals("0"))
+                .map(featureKey -> {
+
+                    return new Attribute(featureKey);
+
+                })
+                .forEach(a -> {
+                    attrInfo.addElement(a);
+                });
 
         Instances data = new Instances(dataset.getDatasetURI(), attrInfo, dataset.getDataEntry().size());
 
+        HashSet test = new HashSet();
+        dataset.getDataEntry().stream().forEach(dataEntry -> {
+            //Instance instance = new Instance(dataEntry.getValues().size());
+            test.addAll(dataEntry.getValues().entrySet());
+        });
+
         dataset.getDataEntry().stream().map((dataEntry) -> {
             Instance instance = new Instance(dataEntry.getValues().size());
-            dataEntry.getValues().entrySet().stream().forEach(entry -> {
-                instance.setValue(data.attribute(entry.getKey()), Double.parseDouble(entry.getValue().toString()));
-            });
+            dataEntry.getValues().entrySet().stream()
+                    //.filter(entry -> !entry.getKey().equals("0"))
+                    .forEach(entry -> {
+//                        String featName = dataset.getFeatures().stream()
+//                                                    .filter(f->f.getKey().equals(entry.getKey()))
+//                                                    .findAny().get().getName();
+                        String featKey = entry.getKey();
+                        //instance.setValue(data.attribute(featName), Double.parseDouble(entry.getValue().toString()));
+                        instance.setValue(data.attribute(featKey), Double.parseDouble(entry.getValue().toString()));
+                    });
             return instance;
         }).forEach((instance) -> {
             data.add(instance);
