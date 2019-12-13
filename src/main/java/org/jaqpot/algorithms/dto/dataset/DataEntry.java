@@ -59,7 +59,7 @@ public class DataEntry {
     public Map<String, Object> getValues() {
         return values;
     }
-
+    
     public void setValues(TreeMap<String, Object> values) {
         this.values = values;
     }
