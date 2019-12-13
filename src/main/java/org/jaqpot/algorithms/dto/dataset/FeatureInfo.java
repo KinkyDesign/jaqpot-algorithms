@@ -29,25 +29,24 @@
  */
 package org.jaqpot.algorithms.dto.dataset;
 
-
-import com.fasterxml.jackson.annotation.JsonInclude;
-import javax.xml.bind.annotation.XmlRootElement;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.util.Map;
 import java.util.Objects;
 
-
-
-@XmlRootElement
-@JsonInclude(JsonInclude.Include.NON_NULL)
+/**
+ *
+ * @author Pantelis Sopasakis
+ * @author Charalampos Chomenidis
+ *
+ */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class FeatureInfo {
 
     private String URI;
     private String name;
     private String units;
-    private String ont;
     private Map<String, Object> conditions;
     private Dataset.DescriptorCategory category;
-    private String key;
 
     public FeatureInfo() {
     }
@@ -105,22 +104,6 @@ public class FeatureInfo {
         this.category = category;
     }
 
-    public String getOnt() {
-        return ont;
-    }
-
-    public void setOnt(String ont) {
-        this.ont = ont;
-    }
-
-    public String getKey() {
-        return key;
-    }
-
-    public void setKey(String key) {
-        this.key = key;
-    }
-    
     @Override
     public int hashCode() {
         int hash = 7;

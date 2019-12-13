@@ -1,4 +1,4 @@
-package org.jaqpot.algorithms.factory;
+package org.jaqpot.algorithms.utils;
 
 import org.apache.commons.lang3.math.NumberUtils;
 import org.jaqpot.algorithms.dto.dataset.DataEntry;
@@ -8,7 +8,6 @@ import org.jaqpot.algorithms.dto.dataset.Substance;
 
 import java.io.InputStream;
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static org.jaqpot.algorithms.utils.CSVUtils.parseLine;
 
@@ -21,15 +20,14 @@ public class DatasetFactory {
         } else if (dataset == null && other == null) {
             return null;
         } else {
-            for (int i = 0; i < dataset.getDataEntry().size(); i++) {
+            for (int i = 0; i < dataset.getDataEntry().size(); i++)
                 dataset.getDataEntry().get(i).getValues().putAll(other.getDataEntry().get(i).getValues());
-            }
             dataset.getFeatures().addAll(other.getFeatures());
             return dataset;
         }
     }
 
-    public static Dataset calculateRowsAndColumns(InputStream stream) {
+    public static  Dataset calculateRowsAndColumns(InputStream stream) {
         Dataset dataset = new Dataset();
         Scanner scanner = new Scanner(stream);
 
@@ -43,9 +41,9 @@ public class DatasetFactory {
             List<String> line = parseLine(scanner.nextLine());
             if (firstLine) {
                 for (String l : line) {
-                    String pseudoURL = ("/feature/" + l).replaceAll(" ", "_"); //uriInfo.getBaseUri().toString()+
+                    String pseudoURL = ("/feature/" + l).replaceAll(" ","_"); //uriInfo.getBaseUri().toString()+
                     feature.add(pseudoURL);
-                    featureInfoList.add(new FeatureInfo(pseudoURL, l, "NA", new HashMap<>(), Dataset.DescriptorCategory.EXPERIMENTAL));
+                    featureInfoList.add(new FeatureInfo(pseudoURL, l,"NA",new HashMap<>(),Dataset.DescriptorCategory.EXPERIMENTAL));
                 }
                 firstLine = false;
             } else {
@@ -54,11 +52,10 @@ public class DatasetFactory {
                 TreeMap<String, Object> values = new TreeMap<>();
                 while (it1.hasNext() && it2.hasNext()) {
                     String it = it2.next();
-                    if (!NumberUtils.isParsable(it)) {
+                    if (!NumberUtils.isParsable(it))
                         values.put(it1.next(), it);
-                    } else {
-                        values.put(it1.next(), Float.parseFloat(it));
-                    }
+                    else
+                        values.put(it1.next(),Float.parseFloat(it));
                 }
                 Substance substance = new Substance();
                 substance.setURI("/substance/" + count);
@@ -75,36 +72,5 @@ public class DatasetFactory {
         dataset.setFeatures(featureInfoList);
         dataset.setDataEntry(dataEntryList);
         return dataset;
-    }
-
-    //removes the specified feature set from the dataset
-    public static Dataset remove(Dataset dataset, HashSet<String> features) {
-
-       
-        Set<String> keyValues = new HashSet();
-
-        Set<FeatureInfo> ds_features = dataset.getFeatures();
-        Set<FeatureInfo> tobeRemoved = new HashSet(); 
-        ds_features.stream().forEach(feature -> {
-            if (features.contains(feature.getURI())) {
-                tobeRemoved.add(feature);
-                keyValues.add(feature.getKey());
-            } 
-        });
-        ds_features.removeAll(tobeRemoved);
-        dataset.setFeatures(ds_features);
-        
-        dataset.getDataEntry()
-                .parallelStream()
-                .forEach(dataEntry -> {
-                    TreeMap tobeRemovedValues = new TreeMap();
-                    keyValues.stream()
-                            .forEach(key->{
-                               dataEntry.getValues().remove(key);
-                            });
-                    });
-
-        return dataset;
-
     }
 }
