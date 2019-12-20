@@ -302,7 +302,9 @@ public class DatasetResource {
     @GET
     @TokenSecured({RoleEnum.DEFAULT_USER})
     @Produces({"text/csv", MediaType.APPLICATION_JSON})
+
     @Path("{id}")
+
     @Operation(summary = "Finds Dataset by Id",
             description = "Finds specified Dataset",
             responses = {
@@ -325,9 +327,7 @@ public class DatasetResource {
             @QueryParam("stratify") String stratify,
             @QueryParam("seed") Long seed,
             @QueryParam("folds") Integer folds,
-            @QueryParam("target_feature") String targetFeature){
-            
-        
+            @QueryParam("target_feature") String targetFeature) {
     Dataset dataset = null;
         if (dataEntries == null) {
             dataEntries = false;
@@ -336,7 +336,6 @@ public class DatasetResource {
             dataset = datasetLegacyWrapper.find(id, rowStart, rowMax, colStart, colMax);
         } else {
             dataset = datasetHandler.find(id);
-            
         }
         if (dataset == null) {
             throw new NotFoundException("Could not find Dataset with id:" + id);

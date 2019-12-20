@@ -67,6 +67,8 @@ import org.jaqpot.core.model.builder.MetaInfoBuilder;
 import org.jaqpot.core.model.dto.dataset.Dataset;
 import org.jaqpot.core.model.dto.dataset.EntryId;
 import org.jaqpot.core.model.dto.dataset.FeatureInfo;
+import org.jaqpot.core.model.dto.predict.CompositePredictRequest;
+import org.jaqpot.core.model.dto.predict.CompositePredictResponse;
 import org.jaqpot.core.model.facades.UserFacade;
 import org.jaqpot.core.model.factory.DatasetFactory;
 import org.jaqpot.core.model.util.ROG;
@@ -91,6 +93,13 @@ import org.jboss.resteasy.plugins.providers.multipart.MultipartFormDataInput;
  *
  * @author aggel
  */
+
+/**
+ * Between a set of alternative architectural approaches that could have been used for the development of the
+ * ChemPredictorFeature, it was preferred to be used that already used in Jaqpot 4 & 5 for reasons of keeping
+ * uniformity in the coding style.
+ */
+
 @Path("/chemPredictor")
 @Tag(name = "chemPredictor")
 @SecurityScheme(name = "bearerAuth",
@@ -144,8 +153,9 @@ public class ChemPredictorResource {
     @POST
     @TokenSecured({RoleEnum.DEFAULT_USER})
     @Path("/apply")
-    @Consumes({MediaType.MULTIPART_FORM_DATA})
-  
+    //@Consumes({MediaType.MULTIPART_FORM_DATA})
+    @Consumes({MediaType.APPLICATION_JSON})
+    
     @Operation(summary = "SUMMARY",
             description = "DESCRIPTION",
             responses = {
@@ -158,14 +168,16 @@ public class ChemPredictorResource {
             })
     @org.jaqpot.core.service.annotations.Task
     public Response apply(
-            @Parameter(name = "file", description = "csv file", schema = @Schema(type = "string", format = "binary")) @FormParam("file") String file,
-            @Parameter(name = "smilesInput", description = "List of smiles molecules", schema = @Schema(implementation = String.class)) @FormParam("smilesInput") String smilesInput,
-            //@Parameter(name = "algorithmId", schema = @Schema(type = "String")) @FormParam("algorithmId") String algorithmId,
-            @Parameter(name = "predictionFeature", schema = @Schema(type = "String")) @FormParam("predictionFeature") String predictionFeature,
-            @Parameter(name = "parameters", description = "The parameters for the descriptor that will be applied", schema = @Schema(implementation = String.class)) @FormParam("parameters") String parameters,
-            @Parameter(name = "modelId", schema = @Schema(type = "String")) @FormParam("modelId") String modelId,
-            @Parameter(name = "Authorization", description = "Authorization token", schema = @Schema(implementation = String.class)) @HeaderParam("Authorization") String api_key,
-            @Parameter(description = "multipartFormData input", hidden = true) MultipartFormDataInput input)
+           // @Parameter(name = "file", description = "csv file", schema = @Schema(type = "string", format = "binary")) @FormParam("file") String file,
+//            @Parameter(name = "smilesInput", description = "List of smiles molecules", schema = @Schema(implementation = String.class)) @FormParam("smilesInput") String smilesInput,
+//            //@Parameter(name = "algorithmId", schema = @Schema(type = "String")) @FormParam("algorithmId") String algorithmId,
+//            @Parameter(name = "predictionFeature", schema = @Schema(type = "String")) @FormParam("predictionFeature") String predictionFeature,
+//            @Parameter(name = "parameters", description = "The parameters for the descriptor that will be applied", schema = @Schema(implementation = String.class)) @FormParam("parameters") String parameters,
+//            @Parameter(name = "modelId", schema = @Schema(type = "String")) @FormParam("modelId") String modelId,
+//            @Parameter(name = "Authorization", description = "Authorization token", schema = @Schema(implementation = String.class)) @HeaderParam("Authorization") String api_key,
+//            @Parameter(description = "multipartFormData input", hidden = true) MultipartFormDataInput input)
+            CompositePredictRequest request,
+            @Parameter(name = "Authorization", description = "Authorization token", schema = @Schema(implementation = String.class)) @HeaderParam("Authorization") String api_key)
             throws URISyntaxException, QuotaExceededException, JaqpotDocumentSizeExceededException, ParameterIsNullException, ParameterTypeException, ParameterRangeException, ParameterScopeException, JaqpotNotAuthorizedException {
 
         String[] apiA = api_key.split("\\s+");
@@ -182,19 +194,27 @@ public class ChemPredictorResource {
 //                    + ", your quota has been exceeded; you already have " + datasetCount + " datasets. "
 //                    + "No more than " + maxAllowedDatasets + " are allowed with your subscription.");
 //        }
-        Map<String, List<InputPart>> uploadForm = input.getFormDataMap();
-        List<InputPart> inputParts = uploadForm.get("file");
+        //Map<String, List<InputPart>> uploadForm = input.getFormDataMap();
+        //List<InputPart> inputParts = uploadForm.get("file");
         //List<String> smilesList = null;
         List<List<Entry<String, String>>> smilesList = new ArrayList();
-        try {
-            smilesInput = uploadForm.get("smilesInput").get(0).getBodyAsString();
-        } catch (IOException ex) {
-            Logger.getLogger(ChemPredictorResource.class.getName()).log(Level.SEVERE, null, ex);
-        }
+//        try {
+//            //smilesInput = uploadForm.get("smilesInput").get(0).getBodyAsString();
+//        } catch (IOException ex) {
+       //     Logger.getLogger(ChemPredictorResource.class.getName()).log(Level.SEVERE, null, ex);
+       // }
+//        if (smilesInput == null || smilesInput.equals("")) {
+//            if (inputParts == null || inputParts.isEmpty()) {
+//                throw new ParameterIsNullException("smiles");
+//            }
+//        }
+        String smilesInput = request.getSmilesInput();
+        String modelId = request.getModelId();
+        String parameters = serializer.write(request.getParameters());
+        String predictionFeature = request.getPredictionFeature();
+        
         if (smilesInput == null || smilesInput.equals("")) {
-            if (inputParts == null || inputParts.isEmpty()) {
                 throw new ParameterIsNullException("smiles");
-            }
         }
 
 //        try {
@@ -204,27 +224,27 @@ public class ChemPredictorResource {
 //            Logger.getLogger(ChemPredictorResource.class.getName()).log(Level.SEVERE, null, ex);
 //        }
 
-        try {
-            modelId = uploadForm.get("modelId").get(0).getBodyAsString();
+//        try {
+//            modelId = uploadForm.get("modelId").get(0).getBodyAsString();
+//
+//        } catch (IOException ex) {
+//            Logger.getLogger(ChemPredictorResource.class.getName()).log(Level.SEVERE, null, ex);
+//        }
 
-        } catch (IOException ex) {
-            Logger.getLogger(ChemPredictorResource.class.getName()).log(Level.SEVERE, null, ex);
-        }
-
-        try {
-            predictionFeature = uploadForm.get("predictionFeature").get(0).getBodyAsString();
-
-        } catch (IOException ex) {
-            Logger.getLogger(ChemPredictorResource.class.getName()).log(Level.SEVERE, null, ex);
-        }
-
-        if (uploadForm.get("parameters") != null && !uploadForm.get("parameters").isEmpty()) {
-            try {
-                parameters = uploadForm.get("parameters").get(0).getBodyAsString();
-            } catch (IOException ex) {
-                Logger.getLogger(ChemPredictorResource.class.getName()).log(Level.SEVERE, null, ex);
-            }
-        }
+//        try {
+//            predictionFeature = uploadForm.get("predictionFeature").get(0).getBodyAsString();
+//
+//        } catch (IOException ex) {
+//            Logger.getLogger(ChemPredictorResource.class.getName()).log(Level.SEVERE, null, ex);
+//        }
+//
+//        if (uploadForm.get("parameters") != null && !uploadForm.get("parameters").isEmpty()) {
+//            try {
+//                parameters = uploadForm.get("parameters").get(0).getBodyAsString();
+//            } catch (IOException ex) {
+//                Logger.getLogger(ChemPredictorResource.class.getName()).log(Level.SEVERE, null, ex);
+//            }
+//        }
 
         String featureName = "smiles";
 
@@ -243,17 +263,17 @@ public class ChemPredictorResource {
         Date date = new Date();
         Dataset dataset = new Dataset();
 
-        if (inputParts != null && !inputParts.isEmpty()) {
-            for (InputPart inputPart : inputParts) {
-                try {
-                    MultivaluedMap<String, String> header = inputPart.getHeaders();
-                    InputStream inputStream = inputPart.getBody(InputStream.class, null);
-                    calculateRowsAndColumns(dataset, inputStream);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        } else {
+//        if (inputParts != null && !inputParts.isEmpty()) {
+//            for (InputPart inputPart : inputParts) {
+//                try {
+//                    MultivaluedMap<String, String> header = inputPart.getHeaders();
+//                    InputStream inputStream = inputPart.getBody(InputStream.class, null);
+//                    calculateRowsAndColumns(dataset, inputStream);
+//                } catch (IOException e) {
+//                    e.printStackTrace();
+//                }
+//            }
+//        } else {
             if (smilesInput != null && !smilesInput.equals("")) {
                 List<String> smilesStrings = Arrays.asList(smilesInput.split(","));
 
@@ -268,7 +288,7 @@ public class ChemPredictorResource {
                 String featureTemplate = propertyManager.getProperty(PropertyManager.PropertyType.JAQPOT_BASE_SERVICE) + "feature/" + featureName;
                 dataset = DatasetFactory.create(smilesList, featureTemplate);
             }
-        }
+       // }
 
         if (dataset.getDataEntry() == null || dataset.getDataEntry().isEmpty()) {
             throw new IllegalArgumentException("Resulting dataset is empty");
@@ -329,7 +349,11 @@ public class ChemPredictorResource {
         parameterValidator.validate(parameters, descriptor.getParameters());
 
         Task taskCP = compositePredictionService.initiateCompositePrediction(options, securityContext.getUserPrincipal().getName());
-
+ 
+       
+        CompositePredictResponse response = new CompositePredictResponse();
+        
+        response.setTaskId(taskCP.getId());
         return Response.ok(taskCP).build();
 
     }

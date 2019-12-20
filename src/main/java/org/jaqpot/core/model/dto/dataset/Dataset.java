@@ -246,48 +246,7 @@ public class Dataset extends JaqpotEntity {
 
     }
 
-    public List<List<String>> toCSV() {
-        //Ref: https://www.baeldung.com/java-converting-json-to-csv
-        List<List<String>> dataSource = Arrays.asList();
-        JacksonJSONSerializer jsonSerializer = new JacksonJSONSerializer();
-
-        ObjectMapper mapper = new ObjectMapper();
-
-        String datasetInJson = jsonSerializer.write(this);
-        java.io.Writer writer = new StringWriter();
-        try {
-            JsonNode jsonTree = new ObjectMapper().readTree(datasetInJson);
-            CsvSchema.Builder csvSchemaBuilder = CsvSchema.builder();
-            JsonNode firstObject = jsonTree.elements().next();
-            firstObject.fieldNames().forEachRemaining(fieldName -> {
-                csvSchemaBuilder.addColumn(fieldName);
-            });
-            CsvSchema csvSchema = csvSchemaBuilder.build().withHeader();
-            try(SequenceWriter csvWriter = new CsvMapper().writerWithDefaultPrettyPrinter().with(csvSchema)
-                    .forType(List.class).writeValues(writer);)
-	{
-		for (List<String> nextRow : dataSource) {
-			csvWriter.write(nextRow);
-		}
-		// Check to see whether dataSource is empty 
-		// and if so write a single empty list to trigger header output
-		if (dataSource.isEmpty()) {
-			csvWriter.write(Arrays.asList());
-		}
-	}
-//            CsvMapper csvMapper = new CsvMapper();
-//            csvMapper.writerFor(JsonNode.class)
-//                     .with(csvSchema)
-//                     .writeValue(new File("src/main/resources/orderLines.csv"), jsonTree);
-//           plainDataset = csvMapper.writerFor(JsonNode.class).with(csvSchema).writeValueAsString(mapper);
-            
-        } catch (IOException ex) {
-            Logger.getLogger(Dataset.class.getName()).log(Level.SEVERE, null, ex);
-        }
-       
-        return dataSource;
-    }
-
+    
     @Override
     public String toString() {
         return "Dataset{" + "datasetURI=" + datasetURI + ", dataEntry=" + dataEntry + '}';
