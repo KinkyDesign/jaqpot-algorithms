@@ -68,7 +68,6 @@ import org.jaqpot.core.model.dto.dataset.Dataset;
 import org.jaqpot.core.model.dto.dataset.EntryId;
 import org.jaqpot.core.model.dto.dataset.FeatureInfo;
 import org.jaqpot.core.model.dto.predict.CompositePredictRequest;
-import org.jaqpot.core.model.dto.predict.CompositePredictResponse;
 import org.jaqpot.core.model.facades.UserFacade;
 import org.jaqpot.core.model.factory.DatasetFactory;
 import org.jaqpot.core.model.util.ROG;
@@ -145,7 +144,7 @@ public class ChemPredictorResource {
     @Context
     UriInfo uriInfo;
 
-    @EJB
+     @EJB
     CompositePredictionService compositePredictionService;
 
     private static final Logger LOG = Logger.getLogger(DescriptorResource.class.getName());
@@ -351,9 +350,6 @@ public class ChemPredictorResource {
         Task taskCP = compositePredictionService.initiateCompositePrediction(options, securityContext.getUserPrincipal().getName());
  
        
-        CompositePredictResponse response = new CompositePredictResponse();
-        
-        response.setTaskId(taskCP.getId());
         return Response.ok(taskCP).build();
 
     }

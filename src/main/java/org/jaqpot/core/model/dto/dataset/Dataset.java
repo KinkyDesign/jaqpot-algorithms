@@ -44,6 +44,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.logging.Level;
 import org.jaqpot.core.data.serialize.*;
 import java.util.logging.Logger;
@@ -226,11 +228,17 @@ public class Dataset extends JaqpotEntity {
     }
 
     public void setFeature(FeatureInfo fi, String key) {
-
-        HashSet<FeatureInfo> fis = this.getFeatures().stream()
+       //Feature fi exists in the dataset
+        HashSet<FeatureInfo> fis = new HashSet();
+        this.getFeatures().stream()
                 .filter(f -> f.getKey().equals(key))
-                .collect(Collectors.toCollection(HashSet::new));
-        if (fis != null && !fis.isEmpty()) {
+                .forEach(f->{
+                       if(f.getKey().equals(key)){
+                         fis.add(f);
+                       }
+                });
+        //Feature fi exists in the dataset. The key of fi is set explicitely to key.
+        if (!fis.isEmpty()) {
             fis.stream()
                     .forEach((FeatureInfo f) -> {
                         f.setCategory(fi.getCategory());
@@ -246,6 +254,8 @@ public class Dataset extends JaqpotEntity {
 
     }
 
+    
+    
     
     @Override
     public String toString() {

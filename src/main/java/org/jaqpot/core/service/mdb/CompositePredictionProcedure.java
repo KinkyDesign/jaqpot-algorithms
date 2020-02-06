@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -65,7 +66,7 @@ import org.jaqpot.core.service.annotations.Secure;
 import org.jaqpot.core.service.authentication.AAService;
 import org.jaqpot.core.service.client.jpdi.JPDIClient;
 import org.jaqpot.core.service.exceptions.JaqpotDocumentSizeExceededException;
-
+import org.json.JSONObject;
 /**
  *
  * @author aggel
@@ -113,6 +114,9 @@ public class CompositePredictionProcedure extends AbstractJaqpotProcedure implem
     @EJB
     DoaHandler doaHandler;
 
+    @EJB
+    TaskHandler tHandler;
+
     public CompositePredictionProcedure() {
         super(null);
         //        throw new IllegalStateException("Cannot use empty constructor, instantiate with TaskHandler");
@@ -135,6 +139,8 @@ public class CompositePredictionProcedure extends AbstractJaqpotProcedure implem
             return;
         }
         String taskId = messageBody.get("taskId").toString();
+
+        Task task = tHandler.find(taskId);
         String modelId = messageBody.get("modelId").toString();
 
         Model model = modelHandler.findModel(modelId);
@@ -209,8 +215,7 @@ public class CompositePredictionProcedure extends AbstractJaqpotProcedure implem
             dataset = futureDataset.get();
 
             dataset.setId(generatedDatasetId);
-            
-            
+
 //            populateFeatures(dataset,newDatasetURI);
             //dataset = DatasetFactory.mergeColumns(dataset, initialDataset);
             // dataset = formInputDataset(featureURIs, dataset);
@@ -220,15 +225,14 @@ public class CompositePredictionProcedure extends AbstractJaqpotProcedure implem
 //                CalculationsFormatter cf = new CalculationsFormatter();
 //                dataset = cf.format(dataset, dataset.getFeatures());
 //            }
-           
             List<List<Entry<String, String>>> calculations = new ArrayList();
             for (DataEntry dataEntry : dataset.getDataEntry()) {
                 HashMap hm = new HashMap();
                 hm.putAll(dataEntry.getValues());
-                List<Entry<String,String>> l = new ArrayList();
+                List<Entry<String, String>> l = new ArrayList();
                 hm.entrySet().stream()
-                        .forEach(n ->{
-                             l.add((Entry<String,String>)n);
+                        .forEach(n -> {
+                            l.add((Entry<String, String>) n);
                         });
                 calculations.add(l);
             }
@@ -261,7 +265,6 @@ public class CompositePredictionProcedure extends AbstractJaqpotProcedure implem
 //                    .addComments("Created by task " + taskId)
 //                    .addCreators(aaService.getUserFromSSO(apiKey).getId())
 //                    .addSources(datasetURI)
-            
 //                    .build();
 //            dataset.setMeta(datasetMeta);
 //            dataset.setVisible(Boolean.TRUE);
@@ -354,6 +357,13 @@ public class CompositePredictionProcedure extends AbstractJaqpotProcedure implem
             progress("Starting Prediction...");
 
             dataset = jpdiClient.predict(dataset, model, dataset.getMeta(), taskId, doaM).get();
+            List<HashMap<String, Object>> predictions = DatasetFactory.zip(dataset);
+            String result = serializer.write(predictions);
+//            JSONObject jo = new JSONObject();
+//            jo.put("name", "jon doe");
+//            jo.put("age", "22");
+//            jo.put("city", "chicago");
+//            String result = "lkhkshkh";
             progress("Prediction completed successfully.");
             progress(80f, "Dataset was built successfully.");
             checkCancelled();
@@ -384,8 +394,9 @@ public class CompositePredictionProcedure extends AbstractJaqpotProcedure implem
             dataset = DatasetFactory.mergeColumns(dataset, initialDataset);
             datasetLegacyWrapper.create(dataset);
             //datasetHandler.create(dataset);
-
-            complete("dataset/" + dataset.getId());
+           
+            //complete("dataset/" + dataset.getId());
+            complete(result);
 
         } catch (InterruptedException ex) {
             LOG.log(Level.SEVERE, "JPDI Prediction procedure interupted", ex);
@@ -399,7 +410,7 @@ public class CompositePredictionProcedure extends AbstractJaqpotProcedure implem
             LOG.log(Level.INFO, "Task with id:{0} was cancelled", taskId);
 //            sendException(creator,"Error while applying model "+ model.getMeta().getTitles().iterator().next() +". Cancel Error.");
             cancel();
-        }catch (Exception ex) {
+        } catch (Exception ex) {
             LOG.log(Level.SEVERE, "JPDI Prediction procedure unknown error", ex);
             errInternalServerError(ex, "JPDI Prediction procedure unknown error");
 //            sendException(creator,"Error while applying model "+ model.getMeta().getTitles().iterator().next() +". Unknown Error.");
@@ -430,29 +441,29 @@ public class CompositePredictionProcedure extends AbstractJaqpotProcedure implem
         }
     }
 
-       private Dataset formInputDataset(@NotNull Set<String> featureURIs, List<List<Entry<String, String>>> calculations) {
-         HashMap<String, String> featureMap = new HashMap();
-            featureURIs.stream()
-                    .map((String featureUri) -> {
-                        String id = featureUri.split("feature/")[1];
-                        Feature feature = featureHandler.find(id);
-                        return feature;
-                    })
-                    .collect(Collectors.toSet())
-                    .stream()
-                    .forEach(feature -> {
-                        featureMap.put(feature.getTitle(), propertyManager.getProperty(PropertyManager.PropertyType.JAQPOT_BASE_SERVICE) + "feature/" + feature.getId());
-                    });
-            int size = calculations.size();
+    private Dataset formInputDataset(@NotNull Set<String> featureURIs, List<List<Entry<String, String>>> calculations) {
+        HashMap<String, String> featureMap = new HashMap();
+        featureURIs.stream()
+                .map((String featureUri) -> {
+                    String id = featureUri.split("feature/")[1];
+                    Feature feature = featureHandler.find(id);
+                    return feature;
+                })
+                .collect(Collectors.toSet())
+                .stream()
+                .forEach(feature -> {
+                    featureMap.put(feature.getTitle(), propertyManager.getProperty(PropertyManager.PropertyType.JAQPOT_BASE_SERVICE) + "feature/" + feature.getId());
+                });
+        int size = calculations.size();
         List<List<Entry<String, String>>> filteredCalculations = IntStream.range(0, size)
-                .mapToObj( (int i) -> {
-                     List<Entry<String, String>> fle = calculations.get(i).stream()
-                             .filter((Entry e) -> featureMap.containsKey(e.getKey().toString()))
-                             .collect(Collectors.toList());
-                     return  fle;    
+                .mapToObj((int i) -> {
+                    List<Entry<String, String>> fle = calculations.get(i).stream()
+                    .filter((Entry e) -> featureMap.containsKey(e.getKey().toString()))
+                    .collect(Collectors.toList());
+                    return fle;
                 })
                 .collect(Collectors.toList());
-                
+
         Dataset newDataset = DatasetFactory.create(filteredCalculations, propertyManager.getProperty(PropertyManager.PropertyType.JAQPOT_BASE_SERVICE) + "feature/");
 
         newDataset.getFeatures().stream()

@@ -68,6 +68,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.jaqpot.core.data.AlgorithmHandler;
+import org.jaqpot.core.model.builder.FeatureBuilder;
 import org.jaqpot.core.model.factory.FeatureFactory;
 
 import org.jaqpot.core.service.exceptions.JaqpotDocumentSizeExceededException;
@@ -103,7 +104,7 @@ public class JPDIClientImpl implements JPDIClient {
     @Override
     public Future<Dataset> calculate(byte[] file, Algorithm algorithm, Map<String, Object> parameters, String taskId) {
         CompletableFuture<Dataset> futureDataset = new CompletableFuture<>();
-
+        
         //TODO Create a calculateService for algorithms.
         final HttpPost request = new HttpPost(algorithm.getReportService());
 
@@ -342,6 +343,7 @@ public class JPDIClientImpl implements JPDIClient {
                                 Feature predictionFeatureResource = featureHandler.findByTitleAndSource(featureTitle, "algorithm/" + algorithm.getId());
                                 if (predictionFeatureResource == null) {
                                     // Create the prediction features (POST /feature)
+                                   // String dependentFeatureName = featureHandler.find(predictionFeature.split("feature/")[1]).getTitle();
                                     String predFeatID = randomStringGenerator.nextString(12);
                                     predictionFeatureResource = new Feature();
                                     predictionFeatureResource.setId(predFeatID);
@@ -356,7 +358,12 @@ public class JPDIClientImpl implements JPDIClient {
                                             .addCreators(algorithm.getMeta().getCreators())
                                             .build());
                                     /* Create feature */
+//                                    Feature predictionFeature = FeatureBuilder.builder(predictionFeatureResource)
+//                                            .addDescriptions(dependentFeatureName)
+//                                            .build();
+//                                    
                                     featureHandler.create(predictionFeatureResource);
+                                    //featureHandler.create(predictionFeature);
                                 }
                                 predictedFeatures.add(baseURI + "feature/" + predictionFeatureResource.getId());
                             }
@@ -412,7 +419,7 @@ public class JPDIClientImpl implements JPDIClient {
     }
 
     @Override
-    public Future<Dataset> predict(Dataset inputDataset, Model model, MetaInfo datasetMeta, String taskId, Doa doa) {
+   public Future<Dataset> predict(Dataset inputDataset, Model model, MetaInfo datasetMeta, String taskId, Doa doa) {
 
         CompletableFuture<Dataset> futureDataset = new CompletableFuture<>();
         Dataset dataset = DatasetFactory.copy(inputDataset);

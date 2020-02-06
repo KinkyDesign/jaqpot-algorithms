@@ -18,6 +18,12 @@
             <version>1.5.10</version>
             <type>jar</type>
         </dependency-->
+            <!-- https://mvnrepository.com/artifact/com.google.code.gson/gson -->
+   <dependency>
+    <groupId>org.json</groupId>
+    <artifactId>json</artifactId>
+    <version>20180130</version>
+</dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.dataformat</groupId>
             <artifactId>jackson-dataformat-yaml</artifactId>

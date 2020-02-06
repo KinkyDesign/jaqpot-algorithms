@@ -168,7 +168,7 @@ public class FeatureResource {
     @Operation(summary = "Finds Feature by ID",
             description = "Finds specified Feature (by ID)",
             responses = {
-                @ApiResponse(content = @Content(schema = @Schema(implementation = Feature.class)))
+                @ApiResponse(responseCode = "200", content = @Content(schema = @Schema(implementation = Feature.class)))
             })
     public Response getFeature(
             //@ApiParam(value = "Authorization token") @HeaderParam("Authorization") String api_key,

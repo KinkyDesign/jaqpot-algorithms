@@ -129,7 +129,7 @@ public class TaskResource {
         }
         foundTasks.stream().forEach(task -> {
             if (task.getResult() != null) {
-                task.setResultUri(uriInfo.getBaseUri() + task.getResult());
+                task.setResultUri(uriInfo.getBaseUri() + task.getResult().toString());
             }
         });
         return Response.ok(foundTasks)
@@ -139,7 +139,8 @@ public class TaskResource {
 
     @GET
     @TokenSecured({RoleEnum.DEFAULT_USER})
-    @Produces({MediaType.APPLICATION_JSON, "text/uri-list"})
+   // @Produces({MediaType.APPLICATION_JSON, "text/uri-list"})
+    @Produces({MediaType.APPLICATION_JSON})
     @Path("/{id}")
    
     @Operation(summary = "Finds Task by Id",
@@ -159,7 +160,7 @@ public class TaskResource {
             throw new NotFoundException("Task " + uriInfo.getPath() + "not found");
         }
         if (task.getResult() != null) {
-            task.setResultUri(uriInfo.getBaseUri() + task.getResult());
+            task.setResultUri(uriInfo.getBaseUri() + task.getResult().toString());
         }
 
         Response.ResponseBuilder builder = Response
@@ -229,6 +230,7 @@ public class TaskResource {
     @GET
     @Path("/{id}/poll")
     @TokenSecured({RoleEnum.DEFAULT_USER})
+    @Produces({MediaType.APPLICATION_JSON})
     @Operation(summary = "Poll Task by Id",
             description = "Implements long polling",
             responses = {

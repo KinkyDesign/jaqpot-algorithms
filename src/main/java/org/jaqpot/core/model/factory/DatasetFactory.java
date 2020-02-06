@@ -32,6 +32,7 @@ package org.jaqpot.core.model.factory;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Random;
@@ -329,11 +330,11 @@ public class DatasetFactory {
                 dataEntry.getValues().putAll(otherEntry.getValues());
             }
 
-            other.getFeatures().stream()
-                    .forEach(fi -> {
-                           dataset.setFeature(fi, fi.getKey());
-                    });
-
+//            other.getFeatures().stream()
+//                    .forEach(fi -> {
+//                        dataset.setFeature(fi, fi.getKey());
+//                    });
+            dataset.getFeatures().addAll(other.getFeatures());
             return dataset;
         }
     }
@@ -414,4 +415,22 @@ public class DatasetFactory {
 
         return dataset;
     }
+
+    public static List<HashMap<String, Object>> zip(Dataset dataset) {
+       
+        List<HashMap<String, Object>> zipped = new ArrayList();
+        HashMap<String, Object> resMap = new LinkedHashMap();
+        dataset.getDataEntry().stream()
+                .forEach((DataEntry de) -> {
+                    
+                    de.getValues().entrySet().stream()
+                    .forEach((Entry e) -> {
+                        resMap.put(dataset.getFeature(e.getKey().toString()).getName(), e.getValue());
+                        
+                    });
+                    zipped.add(resMap);
+                });
+        return zipped;
+    }
+
 }
